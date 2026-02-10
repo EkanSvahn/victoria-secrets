@@ -16,6 +16,8 @@ type Config struct {
 	RequestTimeout  time.Duration
 	AllowedOrigin   string
 	TrustedProxyCID string
+	RateLimitRPM    int
+	RateLimitBurst  int
 }
 
 func Load() (Config, error) {
@@ -41,6 +43,20 @@ func Load() (Config, error) {
 	}
 	if cfg.IDLengthBytes < 16 || cfg.IDLengthBytes > 64 {
 		return Config{}, fmt.Errorf("ID_LENGTH_BYTES must be between 16 and 64")
+	}
+	cfg.RateLimitRPM, err = getenvInt("RATE_LIMIT_RPM", 60)
+	if err != nil {
+		return Config{}, fmt.Errorf("RATE_LIMIT_RPM: %w", err)
+	}
+	if cfg.RateLimitRPM < 1 || cfg.RateLimitRPM > 10000 {
+		return Config{}, fmt.Errorf("RATE_LIMIT_RPM must be between 1 and 10000")
+	}
+	cfg.RateLimitBurst, err = getenvInt("RATE_LIMIT_BURST", 20)
+	if err != nil {
+		return Config{}, fmt.Errorf("RATE_LIMIT_BURST: %w", err)
+	}
+	if cfg.RateLimitBurst < 1 || cfg.RateLimitBurst > 10000 {
+		return Config{}, fmt.Errorf("RATE_LIMIT_BURST must be between 1 and 10000")
 	}
 	timeoutMs, err := getenvInt64("REQUEST_TIMEOUT_MS", 5000)
 	if err != nil {

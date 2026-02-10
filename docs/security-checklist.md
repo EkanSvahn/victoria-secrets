@@ -4,7 +4,7 @@
 - [ ] Run behind HTTPS reverse proxy with HSTS.
 - [ ] Restrict Redis to private subnet and firewall rules.
 - [ ] Set production `ALLOWED_ORIGIN`.
-- [ ] Add API rate limiting (per IP and endpoint).
+- [x] Add API rate limiting (per IP and endpoint).
 - [ ] Configure alerting on 4xx/5xx spikes.
 - [ ] Enable container image and dependency scanning in CI.
 

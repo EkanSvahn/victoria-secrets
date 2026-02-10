@@ -17,6 +17,8 @@ services:
       ID_LENGTH_BYTES: "24"
       REQUEST_TIMEOUT_MS: "5000"
       ALLOWED_ORIGIN: "https://vaultdrop.example.com"
+      RATE_LIMIT_RPM: "120"
+      RATE_LIMIT_BURST: "40"
     depends_on:
       - redis
     restart: unless-stopped
