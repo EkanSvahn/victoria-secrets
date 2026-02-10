@@ -1,0 +1,37 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru"]
+    tmpfs:
+      - /data
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ../backend
+    environment:
+      LISTEN_ADDR: ":8080"
+      REDIS_URL: "redis://redis:6379/0"
+      MAX_BODY_BYTES: "4194304"
+      MAX_TTL_SECONDS: "86400"
+      ID_LENGTH_BYTES: "24"
+      REQUEST_TIMEOUT_MS: "5000"
+      ALLOWED_ORIGIN: "http://localhost:5173"
+    depends_on:
+      - redis
+    ports:
+      - "8080:8080"
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      VITE_API_BASE_URL: "http://localhost:8080"
+    volumes:
+      - ../frontend:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
