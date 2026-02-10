@@ -18,6 +18,8 @@ services:
       ID_LENGTH_BYTES: "24"
       REQUEST_TIMEOUT_MS: "5000"
       ALLOWED_ORIGIN: "http://localhost:5173"
+      RATE_LIMIT_RPM: "60"
+      RATE_LIMIT_BURST: "20"
     depends_on:
       - redis
     ports:

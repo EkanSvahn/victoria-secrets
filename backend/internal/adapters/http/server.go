@@ -13,12 +13,14 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 	mux := http.NewServeMux()
 	handler := NewHandler(service)
 	handler.RegisterRoutes(mux)
+	limiter := NewLimiter(cfg.RateLimitRPM, cfg.RateLimitBurst)
 
 	stack := chain(
 		mux,
 		withRequestID,
 		securityHeaders,
 		cors(cfg.AllowedOrigin),
+		rateLimit(limiter),
 		withBodyLimit(cfg.MaxBodyBytes),
 		withTimeout(cfg.RequestTimeout),
 	)

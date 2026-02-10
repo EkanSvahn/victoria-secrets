@@ -8,6 +8,7 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 - TTL-based expiry in Redis
 - Optional password-derived key flow
 - Minimal server-side metadata and strict security headers
+- IP-based token-bucket rate limiting on secret endpoints
 
 ## Stack
 - Backend: Go (`net/http`), Redis
