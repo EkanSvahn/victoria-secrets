@@ -14,24 +14,25 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 	mux := http.NewServeMux()
 	counters := metrics.NewCounters()
 	handler := NewHandler(service, RequestLimits{
-		MaxMetaBytes:   cfg.MaxMetaBytes,
-		MaxCipherBytes: cfg.MaxCipherBytes,
-		MaxFileBytes: cfg.MaxFileBytes,
+		MaxMetaBytes:     cfg.MaxMetaBytes,
+		MaxCipherBytes:   cfg.MaxCipherBytes,
+		MaxFileBytes:     cfg.MaxFileBytes,
 		AllowedFileMIMEs: cfg.AllowedFileMIMEs,
-		MaxTTLSeconds: cfg.MaxTTLSeconds,
-		MaxViews: cfg.MaxViews,
-		RequirePassword: cfg.RequirePassword,
+		MaxTTLSeconds:    cfg.MaxTTLSeconds,
+		MaxViews:         cfg.MaxViews,
+		RequirePassword:  cfg.RequirePassword,
 	}, counters)
 	handler.RegisterRoutes(mux)
 	limiter := NewLimiter(cfg.RateLimitRPM, cfg.RateLimitBurst)
+	resolveClientIP := newClientIPResolver(cfg.TrustedProxyCID)
 
 	stack := chain(
 		mux,
 		withRequestID,
-		requestLogger(slog.Default()),
+		requestLogger(slog.Default(), resolveClientIP),
 		securityHeaders,
 		cors(cfg.AllowedOrigins),
-		rateLimit(limiter, counters),
+		rateLimit(limiter, counters, resolveClientIP),
 		withBodyLimit(cfg.MaxBodyBytes),
 		withTimeout(cfg.RequestTimeout),
 	)

@@ -36,7 +36,7 @@ func TestRateLimitMiddlewareProtectedRoute(t *testing.T) {
 		w.WriteHeader(http.StatusCreated)
 	})
 
-	handler := rateLimit(limiter, counters)(mux)
+	handler := rateLimit(limiter, counters, nil)(mux)
 
 	req1 := httptest.NewRequest(http.MethodPost, "/api/v1/secrets", nil)
 	req1.RemoteAddr = "127.0.0.1:1234"
@@ -56,5 +56,27 @@ func TestRateLimitMiddlewareProtectedRoute(t *testing.T) {
 	snapshot := counters.Snapshot()
 	if snapshot.RateLimited != 1 {
 		t.Fatalf("expected one rate-limited count, got %d", snapshot.RateLimited)
+	}
+}
+
+func TestLimiterCleansUpExpiredBuckets(t *testing.T) {
+	limiter := NewLimiter(60, 1)
+	now := time.Unix(0, 0)
+
+	limiter.mu.Lock()
+	limiter.buckets["stale"] = &tokenBucket{tokens: 1, lastRefill: now.Add(-31 * time.Minute)}
+	limiter.buckets["active"] = &tokenBucket{tokens: 1, lastRefill: now}
+	limiter.opCount = 127 // Next call should trigger cleanup.
+	limiter.mu.Unlock()
+
+	_ = limiter.Allow("active", now)
+
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	if _, ok := limiter.buckets["stale"]; ok {
+		t.Fatal("expected stale bucket to be removed")
+	}
+	if _, ok := limiter.buckets["active"]; !ok {
+		t.Fatal("expected active bucket to remain")
 	}
 }

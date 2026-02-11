@@ -22,13 +22,13 @@ type Handler struct {
 }
 
 type RequestLimits struct {
-	MaxMetaBytes   int
-	MaxCipherBytes int
-	MaxFileBytes   int64
+	MaxMetaBytes     int
+	MaxCipherBytes   int
+	MaxFileBytes     int64
 	AllowedFileMIMEs []string
-	MaxTTLSeconds int64
-	MaxViews int64
-	RequirePassword bool
+	MaxTTLSeconds    int64
+	MaxViews         int64
+	RequirePassword  bool
 }
 
 var base64URLPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
@@ -44,8 +44,8 @@ type createSecretRequest struct {
 	Meta       string `json:"meta"`
 	Ciphertext string `json:"ciphertext"`
 	Kind       string `json:"kind"`
-	TTLSeconds *int64  `json:"ttl_seconds,omitempty"`
-	Views      *int64  `json:"views,omitempty"`
+	TTLSeconds *int64 `json:"ttl_seconds,omitempty"`
+	Views      *int64 `json:"views,omitempty"`
 }
 
 type createSecretResponse struct {

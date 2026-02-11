@@ -18,7 +18,7 @@ func TestRequestLoggerLogsSafeRouteLabel(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	handler := chain(mux, withRequestID, requestLogger(logger))
+	handler := chain(mux, withRequestID, requestLogger(logger, nil))
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/secrets/secret-id-123/consume", nil)
 	req.RemoteAddr = "127.0.0.1:1234"
 	res := httptest.NewRecorder()
@@ -36,4 +36,3 @@ func TestRequestLoggerLogsSafeRouteLabel(t *testing.T) {
 		t.Fatalf("expected request_id in log, got %s", logLine)
 	}
 }
-

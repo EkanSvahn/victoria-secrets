@@ -8,6 +8,7 @@
 ## 2) Required Environment Policy
 - `REQUIRE_PASSWORD=true` for organization/internal deployments.
 - `ALLOWED_ORIGINS` set to your real HTTPS origin.
+- `TRUSTED_PROXY_CIDR` set to your reverse-proxy network for correct client IP handling.
 - `STRICT_REDIS_EPHEMERAL=true` to fail startup if Redis persistence is enabled.
 - Set `MAX_FILE_BYTES` and `ALLOWED_FILE_MIME_TYPES` to your policy limits.
 - Keep Redis private (no public ports exposed).

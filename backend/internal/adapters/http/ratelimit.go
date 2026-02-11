@@ -1,7 +1,6 @@
 package http
 
 import (
-	"net"
 	"net/http"
 	"path"
 	"strings"
@@ -21,6 +20,7 @@ type Limiter struct {
 	buckets  map[string]*tokenBucket
 	ratePerS float64
 	burst    float64
+	opCount  int
 }
 
 func NewLimiter(rpm int, burst int) *Limiter {
@@ -49,13 +49,30 @@ func (l *Limiter) Allow(key string, now time.Time) bool {
 	bucket.lastRefill = now
 
 	if bucket.tokens < 1.0 {
+		l.cleanupExpired(now)
 		return false
 	}
 	bucket.tokens -= 1.0
+	l.cleanupExpired(now)
 	return true
 }
 
-func rateLimit(limiter *Limiter, counters *metrics.Counters) func(http.Handler) http.Handler {
+func (l *Limiter) cleanupExpired(now time.Time) {
+	l.opCount++
+	if l.opCount%128 != 0 {
+		return
+	}
+	for key, bucket := range l.buckets {
+		if now.Sub(bucket.lastRefill) > 30*time.Minute {
+			delete(l.buckets, key)
+		}
+	}
+}
+
+func rateLimit(limiter *Limiter, counters *metrics.Counters, resolveClientIP func(*http.Request) string) func(http.Handler) http.Handler {
+	if resolveClientIP == nil {
+		resolveClientIP = remoteIP
+	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			routeKey, protected := classifyProtectedRoute(r.Method, r.URL.Path)
@@ -63,7 +80,7 @@ func rateLimit(limiter *Limiter, counters *metrics.Counters) func(http.Handler) 
 				next.ServeHTTP(w, r)
 				return
 			}
-			key := clientIP(r) + "|" + routeKey
+			key := resolveClientIP(r) + "|" + routeKey
 			if !limiter.Allow(key, time.Now()) {
 				if counters != nil {
 					counters.IncRateLimited()
@@ -102,15 +119,4 @@ func classifyProtectedRoute(method, rawPath string) (string, bool) {
 		}
 	}
 	return "", false
-}
-
-func clientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
-	if err != nil || host == "" {
-		if r.RemoteAddr == "" {
-			return "unknown"
-		}
-		return r.RemoteAddr
-	}
-	return host
 }

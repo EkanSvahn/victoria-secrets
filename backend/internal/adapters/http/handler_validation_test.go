@@ -6,11 +6,11 @@ func p64(v int64) *int64 { return &v }
 
 func baseLimits() RequestLimits {
 	return RequestLimits{
-		MaxMetaBytes:    1024,
-		MaxCipherBytes:  4096,
-		MaxTTLSeconds:   3600,
-		MaxViews:        100,
-		MaxFileBytes:    4096,
+		MaxMetaBytes:     1024,
+		MaxCipherBytes:   4096,
+		MaxTTLSeconds:    3600,
+		MaxViews:         100,
+		MaxFileBytes:     4096,
 		AllowedFileMIMEs: []string{"application/pdf", "application/octet-stream"},
 	}
 }
@@ -133,13 +133,13 @@ func TestValidateCreateSecretRequestRejectsKDFParamsWithoutKDF(t *testing.T) {
 
 func TestValidateCreateSecretRequestRejectsFileTooLarge(t *testing.T) {
 	limits := RequestLimits{
-		MaxMetaBytes:      512,
-		MaxCipherBytes:    1024,
-		MaxTTLSeconds:     3600,
-		MaxViews:          100,
-		MaxFileBytes:      1024,
-		AllowedFileMIMEs:  []string{"application/pdf"},
-		RequirePassword:   false,
+		MaxMetaBytes:     512,
+		MaxCipherBytes:   1024,
+		MaxTTLSeconds:    3600,
+		MaxViews:         100,
+		MaxFileBytes:     1024,
+		AllowedFileMIMEs: []string{"application/pdf"},
+		RequirePassword:  false,
 	}
 	views := int64(1)
 	err := validateCreateSecretRequest(createSecretRequest{
@@ -155,13 +155,13 @@ func TestValidateCreateSecretRequestRejectsFileTooLarge(t *testing.T) {
 
 func TestValidateCreateSecretRequestRejectsFileMimeNotAllowed(t *testing.T) {
 	limits := RequestLimits{
-		MaxMetaBytes:      512,
-		MaxCipherBytes:    1024,
-		MaxTTLSeconds:     3600,
-		MaxViews:          100,
-		MaxFileBytes:      4096,
-		AllowedFileMIMEs:  []string{"application/pdf"},
-		RequirePassword:   false,
+		MaxMetaBytes:     512,
+		MaxCipherBytes:   1024,
+		MaxTTLSeconds:    3600,
+		MaxViews:         100,
+		MaxFileBytes:     4096,
+		AllowedFileMIMEs: []string{"application/pdf"},
+		RequirePassword:  false,
 	}
 	views := int64(1)
 	err := validateCreateSecretRequest(createSecretRequest{
@@ -177,13 +177,13 @@ func TestValidateCreateSecretRequestRejectsFileMimeNotAllowed(t *testing.T) {
 
 func TestValidateCreateSecretRequestRejectsUnsafeFileName(t *testing.T) {
 	limits := RequestLimits{
-		MaxMetaBytes:      512,
-		MaxCipherBytes:    1024,
-		MaxTTLSeconds:     3600,
-		MaxViews:          100,
-		MaxFileBytes:      4096,
-		AllowedFileMIMEs:  []string{"application/pdf"},
-		RequirePassword:   false,
+		MaxMetaBytes:     512,
+		MaxCipherBytes:   1024,
+		MaxTTLSeconds:    3600,
+		MaxViews:         100,
+		MaxFileBytes:     4096,
+		AllowedFileMIMEs: []string{"application/pdf"},
+		RequirePassword:  false,
 	}
 	views := int64(1)
 	err := validateCreateSecretRequest(createSecretRequest{

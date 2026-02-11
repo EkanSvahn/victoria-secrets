@@ -32,7 +32,10 @@ func withRequestID(next http.Handler) http.Handler {
 	})
 }
 
-func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
+func requestLogger(logger *slog.Logger, resolveClientIP func(*http.Request) string) func(http.Handler) http.Handler {
+	if resolveClientIP == nil {
+		resolveClientIP = remoteIP
+	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			started := time.Now()
@@ -50,7 +53,7 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 				"route", route,
 				"status", recorder.statusCode,
 				"duration_ms", durationMs,
-				"remote_ip", clientIP(r),
+				"remote_ip", resolveClientIP(r),
 				"rate_limited", recorder.statusCode == http.StatusTooManyRequests,
 			)
 		})
@@ -63,6 +66,10 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none';")
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Cache-Control", "no-store, max-age=0")
+			w.Header().Set("Pragma", "no-cache")
+		}
 		next.ServeHTTP(w, r)
 	})
 }
