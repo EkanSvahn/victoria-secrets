@@ -66,10 +66,12 @@ type consumeSecretResponse struct {
 	Kind       string `json:"kind"`
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+func (h *Handler) RegisterRoutes(mux *http.ServeMux, metricsEnabled bool) {
 	mux.HandleFunc("GET /api/health", h.health)
 	mux.HandleFunc("GET /api/status", h.status)
-	mux.HandleFunc("GET /api/metrics", h.getMetrics)
+	if metricsEnabled {
+		mux.HandleFunc("GET /api/metrics", h.getMetrics)
+	}
 	mux.HandleFunc("POST /api/v1/secrets", h.createSecret)
 	mux.HandleFunc("GET /api/v1/secrets/{id}", h.previewSecret)
 	mux.HandleFunc("POST /api/v1/secrets/{id}/consume", h.consumeSecret)

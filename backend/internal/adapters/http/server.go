@@ -22,7 +22,7 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 		MaxViews:         cfg.MaxViews,
 		RequirePassword:  cfg.RequirePassword,
 	}, counters)
-	handler.RegisterRoutes(mux)
+	handler.RegisterRoutes(mux, cfg.MetricsEnabled)
 	limiter := NewLimiter(cfg.RateLimitRPM, cfg.RateLimitBurst)
 	resolveClientIP := newClientIPResolver(cfg.TrustedProxyCID)
 

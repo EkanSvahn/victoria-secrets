@@ -66,7 +66,7 @@ func newIntegrationMux(limits RequestLimits) *http.ServeMux {
 	service := app.NewService(repo, limits.MaxTTLSeconds, limits.MaxViews, 12)
 	handler := NewHandler(service, limits, nil)
 	mux := http.NewServeMux()
-	handler.RegisterRoutes(mux)
+	handler.RegisterRoutes(mux, true)
 	return mux
 }
 
