@@ -21,5 +21,6 @@
 ## Release Checklist (`v0.1.0`)
 - [ ] All backend and frontend CI checks green on `main`
 - [ ] Local manual smoke tests complete (create/open text + file)
+- [x] Deployment runbook drafted (`docs/deployment-runbook.md`)
 - [ ] Security docs reviewed (`docs/security-checklist.md`, `docs/threat-model.md`, `docs/production-hardening.md`)
 - [ ] Tag and release notes drafted

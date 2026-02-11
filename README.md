@@ -53,4 +53,4 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 - Legacy PBKDF2 links remain decryptable; new password-protected secrets use Argon2id.
 - Startup performs Redis ephemeral-mode self-check (`appendonly=no`, `save=""`) when strict mode is enabled.
 
-Read `docs/threat-model.md`, `docs/security-checklist.md`, and `docs/production-hardening.md` before production deployment.
+Read `docs/threat-model.md`, `docs/security-checklist.md`, `docs/production-hardening.md`, and `docs/deployment-runbook.md` before production deployment.
