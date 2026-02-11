@@ -21,6 +21,7 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 	stack := chain(
 		mux,
 		withRequestID,
+		requestLogger(slog.Default()),
 		securityHeaders,
 		cors(cfg.AllowedOrigins),
 		rateLimit(limiter),
