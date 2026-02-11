@@ -14,6 +14,8 @@ type Config struct {
 	MaxBodyBytes    int64
 	MaxMetaBytes    int
 	MaxCipherBytes  int
+	MaxFileBytes    int64
+	AllowedFileMIMEs []string
 	MaxTTLSeconds   int64
 	IDLengthBytes   int
 	RequestTimeout  time.Duration
@@ -22,6 +24,7 @@ type Config struct {
 	RateLimitRPM    int
 	RateLimitBurst  int
 	RequirePassword bool
+	StrictRedisEphemeral bool
 }
 
 func Load() (Config, error) {
@@ -59,6 +62,14 @@ func Load() (Config, error) {
 	if int64(cfg.MaxCipherBytes+cfg.MaxMetaBytes+1024) > cfg.MaxBodyBytes {
 		return Config{}, fmt.Errorf("MAX_BODY_BYTES too small for configured MAX_META_BYTES and MAX_CIPHERTEXT_BYTES")
 	}
+	cfg.MaxFileBytes, err = getenvInt64("MAX_FILE_BYTES", 4*1024*1024)
+	if err != nil {
+		return Config{}, fmt.Errorf("MAX_FILE_BYTES: %w", err)
+	}
+	if cfg.MaxFileBytes < 1024 || cfg.MaxFileBytes > 100*1024*1024 {
+		return Config{}, fmt.Errorf("MAX_FILE_BYTES must be between 1024 and 104857600")
+	}
+	cfg.AllowedFileMIMEs = parseCSV(getenv("ALLOWED_FILE_MIME_TYPES", "application/pdf,image/png,image/jpeg,text/plain,application/octet-stream"))
 	cfg.MaxTTLSeconds, err = getenvInt64("MAX_TTL_SECONDS", 86400)
 	if err != nil {
 		return Config{}, fmt.Errorf("MAX_TTL_SECONDS: %w", err)
@@ -87,6 +98,10 @@ func Load() (Config, error) {
 	cfg.RequirePassword, err = getenvBool("REQUIRE_PASSWORD", false)
 	if err != nil {
 		return Config{}, fmt.Errorf("REQUIRE_PASSWORD: %w", err)
+	}
+	cfg.StrictRedisEphemeral, err = getenvBool("STRICT_REDIS_EPHEMERAL", true)
+	if err != nil {
+		return Config{}, fmt.Errorf("STRICT_REDIS_EPHEMERAL: %w", err)
 	}
 	timeoutMs, err := getenvInt64("REQUEST_TIMEOUT_MS", 5000)
 	if err != nil {
@@ -142,6 +157,14 @@ func getenvBool(key string, fallback bool) (bool, error) {
 }
 
 func parseAllowedOrigins(raw string) []string {
+	out := parseCSV(raw)
+	if len(out) == 0 {
+		return []string{"http://localhost:5173"}
+	}
+	return out
+}
+
+func parseCSV(raw string) []string {
 	parts := strings.Split(raw, ",")
 	out := make([]string, 0, len(parts))
 	for _, p := range parts {
@@ -150,9 +173,6 @@ func parseAllowedOrigins(raw string) []string {
 			continue
 		}
 		out = append(out, value)
-	}
-	if len(out) == 0 {
-		return []string{"http://localhost:5173"}
 	}
 	return out
 }

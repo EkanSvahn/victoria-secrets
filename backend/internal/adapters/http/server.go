@@ -16,6 +16,8 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 	handler := NewHandler(service, RequestLimits{
 		MaxMetaBytes:   cfg.MaxMetaBytes,
 		MaxCipherBytes: cfg.MaxCipherBytes,
+		MaxFileBytes: cfg.MaxFileBytes,
+		AllowedFileMIMEs: cfg.AllowedFileMIMEs,
 		RequirePassword: cfg.RequirePassword,
 	}, counters)
 	handler.RegisterRoutes(mux)

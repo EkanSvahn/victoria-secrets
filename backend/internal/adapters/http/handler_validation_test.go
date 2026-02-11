@@ -105,3 +105,60 @@ func TestValidateCreateSecretRequestRejectsKDFParamsWithoutKDF(t *testing.T) {
 		t.Fatal("expected error when kdf params are set without kdf")
 	}
 }
+
+func TestValidateCreateSecretRequestRejectsFileTooLarge(t *testing.T) {
+	limits := RequestLimits{
+		MaxMetaBytes:      512,
+		MaxCipherBytes:    1024,
+		MaxFileBytes:      1024,
+		AllowedFileMIMEs:  []string{"application/pdf"},
+		RequirePassword:   false,
+	}
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       `{"v":1,"t":"file","alg":"AES-GCM-256","n":"file.pdf","m":"application/pdf","z":2048}`,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "file",
+		TTLSeconds: 60,
+	}, limits)
+	if err == nil {
+		t.Fatal("expected error for oversized file metadata")
+	}
+}
+
+func TestValidateCreateSecretRequestRejectsFileMimeNotAllowed(t *testing.T) {
+	limits := RequestLimits{
+		MaxMetaBytes:      512,
+		MaxCipherBytes:    1024,
+		MaxFileBytes:      4096,
+		AllowedFileMIMEs:  []string{"application/pdf"},
+		RequirePassword:   false,
+	}
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       `{"v":1,"t":"file","alg":"AES-GCM-256","n":"image.png","m":"image/png","z":100}`,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "file",
+		TTLSeconds: 60,
+	}, limits)
+	if err == nil {
+		t.Fatal("expected error for disallowed mime type")
+	}
+}
+
+func TestValidateCreateSecretRequestRejectsUnsafeFileName(t *testing.T) {
+	limits := RequestLimits{
+		MaxMetaBytes:      512,
+		MaxCipherBytes:    1024,
+		MaxFileBytes:      4096,
+		AllowedFileMIMEs:  []string{"application/pdf"},
+		RequirePassword:   false,
+	}
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       `{"v":1,"t":"file","alg":"AES-GCM-256","n":"../secret.pdf","m":"application/pdf","z":100}`,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "file",
+		TTLSeconds: 60,
+	}, limits)
+	if err == nil {
+		t.Fatal("expected error for unsafe file name")
+	}
+}
