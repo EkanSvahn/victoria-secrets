@@ -52,6 +52,14 @@ type createSecretResponse struct {
 	ID string `json:"id"`
 }
 
+type statusResponse struct {
+	MaxViews             int64    `json:"max_views"`
+	MaxTTLSeconds        int64    `json:"max_ttl_seconds"`
+	MaxFileBytes         int64    `json:"max_file_bytes"`
+	AllowedFileMIMETypes []string `json:"allowed_file_mime_types"`
+	RequirePassword      bool     `json:"require_password"`
+}
+
 type consumeSecretResponse struct {
 	Meta       string `json:"meta"`
 	Ciphertext string `json:"ciphertext"`
@@ -60,6 +68,7 @@ type consumeSecretResponse struct {
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/health", h.health)
+	mux.HandleFunc("GET /api/status", h.status)
 	mux.HandleFunc("GET /api/metrics", h.getMetrics)
 	mux.HandleFunc("POST /api/v1/secrets", h.createSecret)
 	mux.HandleFunc("GET /api/v1/secrets/{id}", h.previewSecret)
@@ -68,6 +77,16 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *Handler) status(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, statusResponse{
+		MaxViews:             h.limits.MaxViews,
+		MaxTTLSeconds:        h.limits.MaxTTLSeconds,
+		MaxFileBytes:         h.limits.MaxFileBytes,
+		AllowedFileMIMETypes: h.limits.AllowedFileMIMEs,
+		RequirePassword:      h.limits.RequirePassword,
+	})
 }
 
 func (h *Handler) getMetrics(w http.ResponseWriter, _ *http.Request) {

@@ -1,4 +1,4 @@
-import type { ConsumeSecretResponse, CreateSecretRequest, CreateSecretResponse } from '../types/api'
+import type { ConsumeSecretResponse, CreateSecretRequest, CreateSecretResponse, StatusResponse } from '../types/api'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
@@ -17,6 +17,11 @@ export async function createSecret(payload: CreateSecretRequest): Promise<Create
     body: JSON.stringify(payload)
   })
   return parseJson<CreateSecretResponse>(response)
+}
+
+export async function getStatus(): Promise<StatusResponse> {
+  const response = await fetch(`${BASE_URL}/status`)
+  return parseJson<StatusResponse>(response)
 }
 
 export async function consumeSecret(id: string): Promise<ConsumeSecretResponse> {
