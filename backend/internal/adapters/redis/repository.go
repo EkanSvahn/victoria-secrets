@@ -16,7 +16,23 @@ local val = redis.call('GET', key)
 if not val then
   return nil
 end
-redis.call('DEL', key)
+local obj = cjson.decode(val)
+local views = obj["views_remaining"]
+if views ~= nil then
+  views = tonumber(views)
+  if views <= 1 then
+    redis.call('DEL', key)
+  else
+    obj["views_remaining"] = views - 1
+    local updated = cjson.encode(obj)
+    local ttl = redis.call('PTTL', key)
+    if ttl and ttl > 0 then
+      redis.call('PSETEX', key, ttl, updated)
+    else
+      redis.call('SET', key, updated)
+    end
+  end
+end
 return val
 `)
 
@@ -28,12 +44,16 @@ func New(client *redis.Client) *Repository {
 	return &Repository{client: client}
 }
 
-func (r *Repository) Store(ctx context.Context, id string, payload ports.SecretRecord, ttlSeconds int64) error {
+func (r *Repository) Store(ctx context.Context, id string, payload ports.SecretRecord, ttlSeconds *int64) error {
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	ok, err := r.client.SetNX(ctx, id, b, time.Duration(ttlSeconds)*time.Second).Result()
+	expiration := time.Duration(0)
+	if ttlSeconds != nil {
+		expiration = time.Duration(*ttlSeconds) * time.Second
+	}
+	ok, err := r.client.SetNX(ctx, id, b, expiration).Result()
 	if err != nil {
 		return err
 	}

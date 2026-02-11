@@ -39,12 +39,14 @@ label {
 
 textarea,
 input,
+select,
 button {
   font: inherit;
 }
 
 textarea,
-input {
+input,
+select {
   border: 1px solid #b9c9db;
   border-radius: 10px;
   padding: 0.7rem;

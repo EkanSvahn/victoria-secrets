@@ -18,6 +18,8 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 		MaxCipherBytes: cfg.MaxCipherBytes,
 		MaxFileBytes: cfg.MaxFileBytes,
 		AllowedFileMIMEs: cfg.AllowedFileMIMEs,
+		MaxTTLSeconds: cfg.MaxTTLSeconds,
+		MaxViews: cfg.MaxViews,
 		RequirePassword: cfg.RequirePassword,
 	}, counters)
 	handler.RegisterRoutes(mux)

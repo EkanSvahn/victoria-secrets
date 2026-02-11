@@ -4,7 +4,8 @@ export interface CreateSecretRequest {
   meta: string
   ciphertext: string
   kind: SecretKind
-  ttl_seconds: number
+  ttl_seconds?: number
+  views?: number
 }
 
 export interface CreateSecretResponse {

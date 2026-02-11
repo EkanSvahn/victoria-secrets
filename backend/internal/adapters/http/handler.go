@@ -26,6 +26,8 @@ type RequestLimits struct {
 	MaxCipherBytes int
 	MaxFileBytes   int64
 	AllowedFileMIMEs []string
+	MaxTTLSeconds int64
+	MaxViews int64
 	RequirePassword bool
 }
 
@@ -42,7 +44,8 @@ type createSecretRequest struct {
 	Meta       string `json:"meta"`
 	Ciphertext string `json:"ciphertext"`
 	Kind       string `json:"kind"`
-	TTLSeconds int64  `json:"ttl_seconds"`
+	TTLSeconds *int64  `json:"ttl_seconds,omitempty"`
+	Views      *int64  `json:"views,omitempty"`
 }
 
 type createSecretResponse struct {
@@ -94,6 +97,7 @@ func (h *Handler) createSecret(w http.ResponseWriter, r *http.Request) {
 		Ciphertext: strings.TrimSpace(req.Ciphertext),
 		Kind:       domain.SecretKind(strings.TrimSpace(req.Kind)),
 		TTLSeconds: req.TTLSeconds,
+		Views:      req.Views,
 	}
 	id, err := h.service.CreateSecret(r.Context(), input)
 	if err != nil {
@@ -146,6 +150,19 @@ func validateCreateSecretRequest(req createSecretRequest, limits RequestLimits) 
 		}
 		if len(limits.AllowedFileMIMEs) > 0 && !slices.Contains(limits.AllowedFileMIMEs, parsedMeta.MimeType) {
 			return errors.New("file mime type is not allowed")
+		}
+	}
+	if req.TTLSeconds != nil && req.Views != nil {
+		return errors.New("views and ttl_seconds cannot both be set")
+	}
+	if req.TTLSeconds != nil {
+		if *req.TTLSeconds < 60 || *req.TTLSeconds > limits.MaxTTLSeconds {
+			return errors.New("ttl_seconds out of allowed range")
+		}
+	}
+	if req.Views != nil {
+		if *req.Views < 1 || *req.Views > limits.MaxViews {
+			return errors.New("views out of allowed range")
 		}
 	}
 	return nil

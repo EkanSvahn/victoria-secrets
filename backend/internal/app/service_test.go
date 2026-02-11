@@ -17,7 +17,7 @@ func newFakeRepo() *fakeRepo {
 	return &fakeRepo{storeData: map[string]ports.SecretRecord{}}
 }
 
-func (f *fakeRepo) Store(_ context.Context, id string, payload ports.SecretRecord, _ int64) error {
+func (f *fakeRepo) Store(_ context.Context, id string, payload ports.SecretRecord, _ *int64) error {
 	if _, exists := f.storeData[id]; exists {
 		return errors.New("exists")
 	}
@@ -41,12 +41,13 @@ func (f *fakeRepo) Exists(_ context.Context, id string) (bool, error) {
 
 func TestCreateAndConsumeSecret(t *testing.T) {
 	repo := newFakeRepo()
-	svc := NewService(repo, 3600, 24)
+	svc := NewService(repo, 3600, 100, 24)
+	ttl := int64(600)
 	id, err := svc.CreateSecret(context.Background(), domain.CreateSecretInput{
 		Meta:       "{}",
 		Ciphertext: "abc",
 		Kind:       domain.SecretKindText,
-		TTLSeconds: 600,
+		TTLSeconds: &ttl,
 	})
 	if err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -69,14 +70,32 @@ func TestCreateAndConsumeSecret(t *testing.T) {
 
 func TestValidation(t *testing.T) {
 	repo := newFakeRepo()
-	svc := NewService(repo, 3600, 24)
+	svc := NewService(repo, 3600, 100, 24)
+	ttl := int64(600)
 	_, err := svc.CreateSecret(context.Background(), domain.CreateSecretInput{
 		Meta:       "",
 		Ciphertext: "abc",
 		Kind:       domain.SecretKindText,
-		TTLSeconds: 600,
+		TTLSeconds: &ttl,
 	})
 	if !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("expected invalid input, got %v", err)
+	}
+}
+
+func TestDefaultViewsApplied(t *testing.T) {
+	repo := newFakeRepo()
+	svc := NewService(repo, 3600, 100, 24)
+	id, err := svc.CreateSecret(context.Background(), domain.CreateSecretInput{
+		Meta:       "{}",
+		Ciphertext: "abc",
+		Kind:       domain.SecretKindText,
+	})
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+	record := repo.storeData[id]
+	if record.ViewsRemaining == nil || *record.ViewsRemaining != 1 {
+		t.Fatalf("expected default views=1, got %+v", record.ViewsRemaining)
 	}
 }
