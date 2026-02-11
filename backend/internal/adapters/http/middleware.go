@@ -41,11 +41,11 @@ func securityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-func cors(allowedOrigin string) func(http.Handler) http.Handler {
+func cors(allowedOrigins []string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			origin := r.Header.Get("Origin")
-			if origin != "" && origin == allowedOrigin {
+			if origin != "" && isAllowedOrigin(origin, allowedOrigins) {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Vary", "Origin")
 				w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
@@ -58,6 +58,15 @@ func cors(allowedOrigin string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func isAllowedOrigin(origin string, allowedOrigins []string) bool {
+	for _, allowed := range allowedOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 func withTimeout(timeout time.Duration) func(http.Handler) http.Handler {

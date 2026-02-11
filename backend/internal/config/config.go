@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -14,7 +15,7 @@ type Config struct {
 	MaxTTLSeconds   int64
 	IDLengthBytes   int
 	RequestTimeout  time.Duration
-	AllowedOrigin   string
+	AllowedOrigins  []string
 	TrustedProxyCID string
 	RateLimitRPM    int
 	RateLimitBurst  int
@@ -24,9 +25,14 @@ func Load() (Config, error) {
 	cfg := Config{
 		ListenAddr:      getenv("LISTEN_ADDR", ":8080"),
 		RedisURL:        getenv("REDIS_URL", "redis://redis:6379/0"),
-		AllowedOrigin:   getenv("ALLOWED_ORIGIN", "http://localhost:5173"),
 		TrustedProxyCID: getenv("TRUSTED_PROXY_CIDR", ""),
 	}
+	allowedOriginsRaw := getenv("ALLOWED_ORIGINS", "")
+	if allowedOriginsRaw == "" {
+		// Backward compatibility with previous single-origin config key.
+		allowedOriginsRaw = getenv("ALLOWED_ORIGIN", "http://localhost:5173,http://127.0.0.1:5173")
+	}
+	cfg.AllowedOrigins = parseAllowedOrigins(allowedOriginsRaw)
 
 	var err error
 	cfg.MaxBodyBytes, err = getenvInt64("MAX_BODY_BYTES", 4*1024*1024)
@@ -97,4 +103,20 @@ func getenvInt64(key string, fallback int64) (int64, error) {
 		return 0, err
 	}
 	return parsed, nil
+}
+
+func parseAllowedOrigins(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		value := strings.TrimSpace(p)
+		if value == "" {
+			continue
+		}
+		out = append(out, value)
+	}
+	if len(out) == 0 {
+		return []string{"http://localhost:5173"}
+	}
+	return out
 }

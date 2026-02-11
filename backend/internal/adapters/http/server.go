@@ -19,7 +19,7 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 		mux,
 		withRequestID,
 		securityHeaders,
-		cors(cfg.AllowedOrigin),
+		cors(cfg.AllowedOrigins),
 		rateLimit(limiter),
 		withBodyLimit(cfg.MaxBodyBytes),
 		withTimeout(cfg.RequestTimeout),
