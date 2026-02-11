@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -29,6 +30,31 @@ func withRequestID(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			started := time.Now()
+			recorder := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+			next.ServeHTTP(recorder, r)
+
+			requestID, _ := r.Context().Value(requestIDKey).(string)
+			route := routeLabel(r.Method, r.URL.Path)
+			durationMs := time.Since(started).Milliseconds()
+
+			logger.Info(
+				"http_request",
+				"request_id", requestID,
+				"method", r.Method,
+				"route", route,
+				"status", recorder.statusCode,
+				"duration_ms", durationMs,
+				"remote_ip", clientIP(r),
+				"rate_limited", recorder.statusCode == http.StatusTooManyRequests,
+			)
+		})
+	}
 }
 
 func securityHeaders(next http.Handler) http.Handler {
@@ -106,4 +132,25 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 
 func cleanID(id string) string {
 	return strings.TrimSpace(id)
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (s *statusRecorder) WriteHeader(statusCode int) {
+	s.statusCode = statusCode
+	s.ResponseWriter.WriteHeader(statusCode)
+}
+
+func routeLabel(method, rawPath string) string {
+	if route, ok := classifyProtectedRoute(method, rawPath); ok {
+		return route
+	}
+	path := strings.TrimSpace(rawPath)
+	if path == "/api/health" {
+		return "GET /api/health"
+	}
+	return method + " " + path
 }
