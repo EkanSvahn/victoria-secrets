@@ -21,6 +21,7 @@ services:
       ALLOWED_ORIGINS: "https://vaultdrop.example.com"
       RATE_LIMIT_RPM: "120"
       RATE_LIMIT_BURST: "40"
+      REQUIRE_PASSWORD: "true"
     depends_on:
       - redis
     restart: unless-stopped
@@ -28,8 +29,27 @@ services:
   web:
     build:
       context: ../frontend
+      args:
+        VITE_API_BASE_URL: "/api"
+        VITE_REQUIRE_PASSWORD: "true"
     restart: unless-stopped
-    ports:
-      - "80:80"
     depends_on:
       - backend
+
+  proxy:
+    image: caddy:2.8-alpine
+    depends_on:
+      - backend
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

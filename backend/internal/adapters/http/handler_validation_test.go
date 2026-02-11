@@ -5,7 +5,7 @@ import "testing"
 func TestValidateCreateSecretRequestAcceptsValidPayload(t *testing.T) {
 	limits := RequestLimits{MaxMetaBytes: 64, MaxCipherBytes: 128}
 	err := validateCreateSecretRequest(createSecretRequest{
-		Meta:       `{"v":1,"t":"text"}`,
+		Meta:       `{"v":1,"t":"text","alg":"AES-GCM-256"}`,
 		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
 		Kind:       "text",
 		TTLSeconds: 60,
@@ -31,7 +31,7 @@ func TestValidateCreateSecretRequestRejectsLargeMeta(t *testing.T) {
 func TestValidateCreateSecretRequestRejectsLargeCiphertext(t *testing.T) {
 	limits := RequestLimits{MaxMetaBytes: 64, MaxCipherBytes: 8}
 	err := validateCreateSecretRequest(createSecretRequest{
-		Meta:       `{"v":1,"t":"text"}`,
+		Meta:       `{"v":1,"t":"text","alg":"AES-GCM-256"}`,
 		Ciphertext: "0123456789",
 		Kind:       "text",
 		TTLSeconds: 60,
@@ -44,7 +44,7 @@ func TestValidateCreateSecretRequestRejectsLargeCiphertext(t *testing.T) {
 func TestValidateCreateSecretRequestRejectsInvalidKind(t *testing.T) {
 	limits := RequestLimits{MaxMetaBytes: 64, MaxCipherBytes: 128}
 	err := validateCreateSecretRequest(createSecretRequest{
-		Meta:       `{"v":1,"t":"text"}`,
+		Meta:       `{"v":1,"t":"text","alg":"AES-GCM-256"}`,
 		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
 		Kind:       "unknown",
 		TTLSeconds: 60,
@@ -54,3 +54,54 @@ func TestValidateCreateSecretRequestRejectsInvalidKind(t *testing.T) {
 	}
 }
 
+func TestValidateCreateSecretRequestAcceptsArgon2Meta(t *testing.T) {
+	limits := RequestLimits{MaxMetaBytes: 256, MaxCipherBytes: 1024, RequirePassword: true}
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       `{"v":1,"t":"text","alg":"AES-GCM-256","kdf":"ARGON2ID","tt":3,"tm":65536,"tp":1,"s":"YWJjZGVmZw"}`,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		TTLSeconds: 60,
+	}, limits)
+	if err != nil {
+		t.Fatalf("expected valid Argon2 payload, got error: %v", err)
+	}
+}
+
+func TestValidateCreateSecretRequestRejectsNoPasswordWhenRequired(t *testing.T) {
+	limits := RequestLimits{MaxMetaBytes: 128, MaxCipherBytes: 128, RequirePassword: true}
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       `{"v":1,"t":"text","alg":"AES-GCM-256"}`,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		TTLSeconds: 60,
+	}, limits)
+	if err == nil {
+		t.Fatal("expected error when password-only mode is enabled")
+	}
+}
+
+func TestValidateCreateSecretRequestRejectsBadMetaSchema(t *testing.T) {
+	limits := RequestLimits{MaxMetaBytes: 256, MaxCipherBytes: 128}
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       `{"v":1,"t":"text","alg":"AES-GCM-256","kdf":"ARGON2ID","tt":3,"tm":4096,"tp":1,"s":"abc"}`,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		TTLSeconds: 60,
+	}, limits)
+	if err == nil {
+		t.Fatal("expected error for weak Argon2 memory parameter")
+	}
+}
+
+func TestValidateCreateSecretRequestRejectsKDFParamsWithoutKDF(t *testing.T) {
+	limits := RequestLimits{MaxMetaBytes: 256, MaxCipherBytes: 128}
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       `{"v":1,"t":"text","alg":"AES-GCM-256","s":"abc","i":310000}`,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		TTLSeconds: 60,
+	}, limits)
+	if err == nil {
+		t.Fatal("expected error when kdf params are set without kdf")
+	}
+}

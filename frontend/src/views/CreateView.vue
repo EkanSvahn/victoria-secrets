@@ -4,6 +4,7 @@ import { createSecret } from '../api/client'
 import { encryptFile, encryptText } from '../api/crypto'
 
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024
+const REQUIRE_PASSWORD = (import.meta.env.VITE_REQUIRE_PASSWORD ?? 'false').toLowerCase() === 'true'
 const text = ref('')
 const mode = ref<'text' | 'file'>('text')
 const file = ref<File | null>(null)
@@ -15,6 +16,7 @@ const loading = ref(false)
 
 const canSubmit = computed(() => {
   if (ttlMinutes.value < 1) return false
+  if (REQUIRE_PASSWORD && password.value.trim().length < 8) return false
   if (mode.value === 'text') return text.value.trim().length > 0
   return file.value !== null
 })
@@ -31,6 +33,9 @@ async function onSubmit() {
   link.value = ''
   loading.value = true
   try {
+    if (REQUIRE_PASSWORD && password.value.trim().length < 8) {
+      throw new Error('Password is required and must be at least 8 characters.')
+    }
     if (mode.value === 'file') {
       if (!file.value) {
         throw new Error('Please select a file.')
@@ -54,6 +59,9 @@ async function onSubmit() {
 
     const base = `${window.location.origin}/s/${created.id}`
     link.value = encrypted.linkSecret ? `${base}#${encrypted.linkSecret}` : base
+    if (REQUIRE_PASSWORD && encrypted.linkSecret) {
+      throw new Error('Password-only mode is enabled; fragment key links are not allowed.')
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to create secret'
   } finally {
@@ -96,9 +104,16 @@ async function onSubmit() {
 
       <label>
         Optional password
-        <input v-model="password" type="password" placeholder="Leave blank for auto key in URL fragment" />
+        <input
+          v-model="password"
+          type="password"
+          :placeholder="REQUIRE_PASSWORD ? 'Required (min 8 chars)' : 'Leave blank for auto key in URL fragment'"
+        />
       </label>
     </div>
+    <p v-if="REQUIRE_PASSWORD">
+      Organization policy: password-only mode is enabled. Link fragments are disabled.
+    </p>
 
     <button :disabled="!canSubmit || loading" @click="onSubmit">{{ loading ? 'Creating...' : 'Create Link' }}</button>
 

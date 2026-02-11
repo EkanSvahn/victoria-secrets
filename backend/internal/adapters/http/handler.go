@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"victora-secret-code/backend/internal/app"
@@ -19,7 +20,10 @@ type Handler struct {
 type RequestLimits struct {
 	MaxMetaBytes   int
 	MaxCipherBytes int
+	RequirePassword bool
 }
+
+var base64URLPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 func NewHandler(service *app.Service, limits RequestLimits) *Handler {
 	return &Handler{service: service, limits: limits}
@@ -97,6 +101,15 @@ func validateCreateSecretRequest(req createSecretRequest, limits RequestLimits) 
 	if len([]byte(meta)) > limits.MaxMetaBytes {
 		return errors.New("meta exceeds maximum allowed size")
 	}
+	kind := strings.TrimSpace(req.Kind)
+	if kind != string(domain.SecretKindText) && kind != string(domain.SecretKindFile) {
+		return errors.New("kind must be text or file")
+	}
+
+	parsedMeta, err := parseAndValidateMeta(meta, kind)
+	if err != nil {
+		return err
+	}
 
 	ciphertext := strings.TrimSpace(req.Ciphertext)
 	if ciphertext == "" {
@@ -106,9 +119,93 @@ func validateCreateSecretRequest(req createSecretRequest, limits RequestLimits) 
 		return errors.New("ciphertext exceeds maximum allowed size")
 	}
 
-	kind := strings.TrimSpace(req.Kind)
-	if kind != string(domain.SecretKindText) && kind != string(domain.SecretKindFile) {
-		return errors.New("kind must be text or file")
+	if parsedMeta.Type != kind {
+		return errors.New("meta type does not match kind")
+	}
+	if limits.RequirePassword && parsedMeta.KDF == "" {
+		return errors.New("password-only mode is enabled")
+	}
+	return nil
+}
+
+type metaPayload struct {
+	Version     int    `json:"v"`
+	Type        string `json:"t"`
+	Algorithm   string `json:"alg"`
+	KDF         string `json:"kdf,omitempty"`
+	Iterations  int    `json:"i,omitempty"`  // PBKDF2
+	Salt        string `json:"s,omitempty"`  // base64url
+	TimeCost    int    `json:"tt,omitempty"` // Argon2id
+	MemoryKiB   int    `json:"tm,omitempty"` // Argon2id
+	Parallelism int    `json:"tp,omitempty"` // Argon2id
+	FileName    string `json:"n,omitempty"`
+	MimeType    string `json:"m,omitempty"`
+	FileSize    int64  `json:"z,omitempty"`
+}
+
+func parseAndValidateMeta(meta, kind string) (*metaPayload, error) {
+	decoder := json.NewDecoder(strings.NewReader(meta))
+	decoder.DisallowUnknownFields()
+	var parsed metaPayload
+	if err := decoder.Decode(&parsed); err != nil {
+		return nil, errors.New("meta must be valid JSON")
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return nil, errors.New("meta must be a single JSON object")
+	}
+	if parsed.Version != 1 {
+		return nil, errors.New("unsupported meta version")
+	}
+	if parsed.Type != "text" && parsed.Type != "file" {
+		return nil, errors.New("meta type must be text or file")
+	}
+	if parsed.Type != kind {
+		return nil, errors.New("meta type and kind mismatch")
+	}
+	if parsed.Algorithm != "AES-GCM-256" {
+		return nil, errors.New("unsupported algorithm")
+	}
+	if err := validateKDF(parsed); err != nil {
+		return nil, err
+	}
+	if parsed.Type == "file" {
+		if strings.TrimSpace(parsed.FileName) == "" {
+			return nil, errors.New("file metadata must include name")
+		}
+		if parsed.FileSize <= 0 {
+			return nil, errors.New("file metadata must include positive size")
+		}
+	}
+	return &parsed, nil
+}
+
+func validateKDF(meta metaPayload) error {
+	if meta.KDF == "" {
+		if meta.Iterations != 0 || meta.TimeCost != 0 || meta.MemoryKiB != 0 || meta.Parallelism != 0 || meta.Salt != "" {
+			return errors.New("kdf parameters provided without kdf")
+		}
+		return nil
+	}
+	if !base64URLPattern.MatchString(meta.Salt) {
+		return errors.New("invalid salt encoding")
+	}
+	switch meta.KDF {
+	case "PBKDF2-SHA256":
+		if meta.Iterations < 100000 || meta.Iterations > 10000000 {
+			return errors.New("invalid PBKDF2 iterations")
+		}
+	case "ARGON2ID":
+		if meta.TimeCost < 1 || meta.TimeCost > 10 {
+			return errors.New("invalid Argon2id time cost")
+		}
+		if meta.MemoryKiB < 8192 || meta.MemoryKiB > 262144 {
+			return errors.New("invalid Argon2id memory cost")
+		}
+		if meta.Parallelism < 1 || meta.Parallelism > 8 {
+			return errors.New("invalid Argon2id parallelism")
+		}
+	default:
+		return errors.New("unsupported kdf")
 	}
 	return nil
 }

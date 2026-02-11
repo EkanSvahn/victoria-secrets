@@ -16,6 +16,11 @@ jobs:
         working-directory: backend
         run: |
           go test ./...
+      - name: Vulnerability scan (Go)
+        working-directory: backend
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -27,5 +32,9 @@ jobs:
       - name: Install and build frontend
         working-directory: frontend
         run: |
-          npm install
+          npm ci
           npm run build
+      - name: Vulnerability scan (npm)
+        working-directory: frontend
+        run: |
+          npm audit --audit-level=high
