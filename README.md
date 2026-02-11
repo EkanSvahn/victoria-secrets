@@ -32,6 +32,7 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 
 ## API (MVP)
 - `GET /api/health`
+- `GET /api/metrics`
 - `POST /api/v1/secrets`
 - `GET /api/v1/secrets/{id}`
 - `POST /api/v1/secrets/{id}/consume`

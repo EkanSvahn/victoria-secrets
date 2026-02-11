@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"victora-secret-code/backend/internal/metrics"
 )
 
 func TestLimiterAllowRefill(t *testing.T) {
@@ -28,12 +30,13 @@ func TestLimiterAllowRefill(t *testing.T) {
 
 func TestRateLimitMiddlewareProtectedRoute(t *testing.T) {
 	limiter := NewLimiter(1, 1)
+	counters := metrics.NewCounters()
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/v1/secrets", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 	})
 
-	handler := rateLimit(limiter)(mux)
+	handler := rateLimit(limiter, counters)(mux)
 
 	req1 := httptest.NewRequest(http.MethodPost, "/api/v1/secrets", nil)
 	req1.RemoteAddr = "127.0.0.1:1234"
@@ -50,5 +53,8 @@ func TestRateLimitMiddlewareProtectedRoute(t *testing.T) {
 	if res2.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected second request to be rate limited, got %d", res2.Code)
 	}
+	snapshot := counters.Snapshot()
+	if snapshot.RateLimited != 1 {
+		t.Fatalf("expected one rate-limited count, got %d", snapshot.RateLimited)
+	}
 }
-
