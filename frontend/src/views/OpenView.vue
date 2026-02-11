@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { consumeSecret } from '../api/client'
+import { consumeSecret, toApiErrorMessage } from '../api/client'
 import { decryptFile, decryptText } from '../api/crypto'
 
 const route = useRoute()
@@ -15,6 +15,7 @@ const consumed = ref(false)
 const isFile = ref(false)
 
 const hasResult = computed(() => (isFile.value ? fileUrl.value !== '' : secret.value !== ''))
+const hasFragment = computed(() => window.location.hash.replace('#', '').trim().length > 0)
 
 function revokeFileUrl() {
   if (fileUrl.value) {
@@ -50,7 +51,10 @@ async function openSecret() {
     }
     consumed.value = true
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to open secret'
+    error.value = toApiErrorMessage(err, 'Failed to open secret.')
+    if (!hasFragment.value && password.value.trim() === '') {
+      error.value += ' Provide the full link including the #fragment key, or enter the password if one was set.'
+    }
   } finally {
     loading.value = false
   }
@@ -71,6 +75,9 @@ onBeforeUnmount(() => {
   <section class="card">
     <h1>Open Secret</h1>
     <p>This operation consumes the secret and cannot be retried.</p>
+    <p v-if="!hasFragment" class="hint">
+      No URL fragment key detected. This is expected only for password-protected links.
+    </p>
 
     <label>
       Password (required only if sender used one)
@@ -96,5 +103,11 @@ onBeforeUnmount(() => {
 .download-link {
   font-weight: 700;
   color: #0d6e5f;
+}
+
+.hint {
+  margin: 0;
+  color: #374b63;
+  font-size: 0.92rem;
 }
 </style>
