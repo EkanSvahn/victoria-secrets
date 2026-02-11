@@ -13,7 +13,9 @@ services:
     environment:
       LISTEN_ADDR: ":8080"
       REDIS_URL: "redis://redis:6379/0"
-      MAX_BODY_BYTES: "4194304"
+      MAX_BODY_BYTES: "7000000"
+      MAX_META_BYTES: "16384"
+      MAX_CIPHERTEXT_BYTES: "6500000"
       MAX_TTL_SECONDS: "86400"
       ID_LENGTH_BYTES: "24"
       REQUEST_TIMEOUT_MS: "5000"

@@ -32,5 +32,6 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 - URL fragments are not sent to the server by browsers.
 - Backend never receives plaintext secret in default flow.
 - Frontend currently enforces a 4 MiB max file upload for secure performance bounds.
+- Backend enforces request validation and payload size caps for `meta` and `ciphertext`.
 
 Read `docs/threat-model.md` and `docs/security-checklist.md` before production deployment.

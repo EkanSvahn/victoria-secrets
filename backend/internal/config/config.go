@@ -12,6 +12,8 @@ type Config struct {
 	ListenAddr      string
 	RedisURL        string
 	MaxBodyBytes    int64
+	MaxMetaBytes    int
+	MaxCipherBytes  int
 	MaxTTLSeconds   int64
 	IDLengthBytes   int
 	RequestTimeout  time.Duration
@@ -38,6 +40,23 @@ func Load() (Config, error) {
 	cfg.MaxBodyBytes, err = getenvInt64("MAX_BODY_BYTES", 4*1024*1024)
 	if err != nil {
 		return Config{}, fmt.Errorf("MAX_BODY_BYTES: %w", err)
+	}
+	cfg.MaxMetaBytes, err = getenvInt("MAX_META_BYTES", 16*1024)
+	if err != nil {
+		return Config{}, fmt.Errorf("MAX_META_BYTES: %w", err)
+	}
+	if cfg.MaxMetaBytes < 256 || cfg.MaxMetaBytes > 1024*1024 {
+		return Config{}, fmt.Errorf("MAX_META_BYTES must be between 256 and 1048576")
+	}
+	cfg.MaxCipherBytes, err = getenvInt("MAX_CIPHERTEXT_BYTES", int(cfg.MaxBodyBytes)-cfg.MaxMetaBytes-1024)
+	if err != nil {
+		return Config{}, fmt.Errorf("MAX_CIPHERTEXT_BYTES: %w", err)
+	}
+	if cfg.MaxCipherBytes < 1024 {
+		return Config{}, fmt.Errorf("MAX_CIPHERTEXT_BYTES must be at least 1024")
+	}
+	if int64(cfg.MaxCipherBytes+cfg.MaxMetaBytes+1024) > cfg.MaxBodyBytes {
+		return Config{}, fmt.Errorf("MAX_BODY_BYTES too small for configured MAX_META_BYTES and MAX_CIPHERTEXT_BYTES")
 	}
 	cfg.MaxTTLSeconds, err = getenvInt64("MAX_TTL_SECONDS", 86400)
 	if err != nil {

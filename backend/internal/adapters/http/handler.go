@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
@@ -12,10 +13,16 @@ import (
 
 type Handler struct {
 	service *app.Service
+	limits  RequestLimits
 }
 
-func NewHandler(service *app.Service) *Handler {
-	return &Handler{service: service}
+type RequestLimits struct {
+	MaxMetaBytes   int
+	MaxCipherBytes int
+}
+
+func NewHandler(service *app.Service, limits RequestLimits) *Handler {
+	return &Handler{service: service, limits: limits}
 }
 
 type createSecretRequest struct {
@@ -56,6 +63,14 @@ func (h *Handler) createSecret(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid_json", "invalid request body")
 		return
 	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		writeError(w, http.StatusBadRequest, "invalid_json", "request body must contain a single JSON object")
+		return
+	}
+	if err := validateCreateSecretRequest(req, h.limits); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_input", err.Error())
+		return
+	}
 	input := domain.CreateSecretInput{
 		Meta:       strings.TrimSpace(req.Meta),
 		Ciphertext: strings.TrimSpace(req.Ciphertext),
@@ -72,6 +87,30 @@ func (h *Handler) createSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, createSecretResponse{ID: id})
+}
+
+func validateCreateSecretRequest(req createSecretRequest, limits RequestLimits) error {
+	meta := strings.TrimSpace(req.Meta)
+	if meta == "" {
+		return errors.New("meta is required")
+	}
+	if len([]byte(meta)) > limits.MaxMetaBytes {
+		return errors.New("meta exceeds maximum allowed size")
+	}
+
+	ciphertext := strings.TrimSpace(req.Ciphertext)
+	if ciphertext == "" {
+		return errors.New("ciphertext is required")
+	}
+	if len([]byte(ciphertext)) > limits.MaxCipherBytes {
+		return errors.New("ciphertext exceeds maximum allowed size")
+	}
+
+	kind := strings.TrimSpace(req.Kind)
+	if kind != string(domain.SecretKindText) && kind != string(domain.SecretKindFile) {
+		return errors.New("kind must be text or file")
+	}
+	return nil
 }
 
 func (h *Handler) previewSecret(w http.ResponseWriter, r *http.Request) {
