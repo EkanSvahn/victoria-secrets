@@ -11,7 +11,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 export async function createSecret(payload: CreateSecretRequest): Promise<CreateSecretResponse> {
-  const response = await fetch(`${BASE_URL}/api/v1/secrets`, {
+  const response = await fetch(`${BASE_URL}/v1/secrets`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -20,13 +20,13 @@ export async function createSecret(payload: CreateSecretRequest): Promise<Create
 }
 
 export async function consumeSecret(id: string): Promise<ConsumeSecretResponse> {
-  const response = await fetch(`${BASE_URL}/api/v1/secrets/${encodeURIComponent(id)}/consume`, {
+  const response = await fetch(`${BASE_URL}/v1/secrets/${encodeURIComponent(id)}/consume`, {
     method: 'POST'
   })
   return parseJson<ConsumeSecretResponse>(response)
 }
 
 export async function previewSecret(id: string): Promise<boolean> {
-  const response = await fetch(`${BASE_URL}/api/v1/secrets/${encodeURIComponent(id)}`)
+  const response = await fetch(`${BASE_URL}/v1/secrets/${encodeURIComponent(id)}`)
   return response.ok
 }

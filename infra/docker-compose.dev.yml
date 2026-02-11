@@ -19,6 +19,7 @@ services:
       MAX_FILE_BYTES: "4194304"
       ALLOWED_FILE_MIME_TYPES: "application/pdf,image/png,image/jpeg,text/plain,application/octet-stream"
       MAX_TTL_SECONDS: "86400"
+      MAX_VIEWS: "100"
       ID_LENGTH_BYTES: "24"
       REQUEST_TIMEOUT_MS: "5000"
       ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
@@ -36,7 +37,7 @@ services:
     working_dir: /app
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     environment:
-      VITE_API_BASE_URL: "http://localhost:8080"
+      VITE_API_BASE_URL: "http://localhost:8080/api"
       VITE_REQUIRE_PASSWORD: "false"
     volumes:
       - ../frontend:/app

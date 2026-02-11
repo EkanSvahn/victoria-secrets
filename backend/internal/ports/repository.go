@@ -6,10 +6,11 @@ type SecretRecord struct {
 	Meta       string `json:"meta"`
 	Ciphertext string `json:"ciphertext"`
 	Kind       string `json:"kind"`
+	ViewsRemaining *int64 `json:"views_remaining,omitempty"`
 }
 
 type SecretRepository interface {
-	Store(ctx context.Context, id string, payload SecretRecord, ttlSeconds int64) error
+	Store(ctx context.Context, id string, payload SecretRecord, ttlSeconds *int64) error
 	Consume(ctx context.Context, id string) (*SecretRecord, error)
 	Exists(ctx context.Context, id string) (bool, error)
 }

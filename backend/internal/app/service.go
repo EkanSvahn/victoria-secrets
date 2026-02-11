@@ -17,20 +17,30 @@ var (
 type Service struct {
 	repo         ports.SecretRepository
 	maxTTL       int64
+	maxViews     int64
 	idBytes      int
 	maxIDRetries int
 }
 
-func NewService(repo ports.SecretRepository, maxTTL int64, idBytes int) *Service {
-	return &Service{repo: repo, maxTTL: maxTTL, idBytes: idBytes, maxIDRetries: 5}
+func NewService(repo ports.SecretRepository, maxTTL int64, maxViews int64, idBytes int) *Service {
+	return &Service{repo: repo, maxTTL: maxTTL, maxViews: maxViews, idBytes: idBytes, maxIDRetries: 5}
 }
 
 func (s *Service) CreateSecret(ctx context.Context, in domain.CreateSecretInput) (string, error) {
-	if err := in.Validate(s.maxTTL); err != nil {
+	if in.TTLSeconds == nil && in.Views == nil {
+		defaultViews := int64(1)
+		in.Views = &defaultViews
+	}
+	if err := in.Validate(s.maxTTL, s.maxViews); err != nil {
 		return "", ErrInvalidInput
 	}
 
-	record := ports.SecretRecord{Meta: in.Meta, Ciphertext: in.Ciphertext, Kind: string(in.Kind)}
+	record := ports.SecretRecord{
+		Meta:           in.Meta,
+		Ciphertext:     in.Ciphertext,
+		Kind:           string(in.Kind),
+		ViewsRemaining: in.Views,
+	}
 	for i := 0; i < s.maxIDRetries; i++ {
 		id, err := security.NewURLSafeID(s.idBytes)
 		if err != nil {

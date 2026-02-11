@@ -17,6 +17,7 @@ type Config struct {
 	MaxFileBytes    int64
 	AllowedFileMIMEs []string
 	MaxTTLSeconds   int64
+	MaxViews        int64
 	IDLengthBytes   int
 	RequestTimeout  time.Duration
 	AllowedOrigins  []string
@@ -73,6 +74,13 @@ func Load() (Config, error) {
 	cfg.MaxTTLSeconds, err = getenvInt64("MAX_TTL_SECONDS", 86400)
 	if err != nil {
 		return Config{}, fmt.Errorf("MAX_TTL_SECONDS: %w", err)
+	}
+	cfg.MaxViews, err = getenvInt64("MAX_VIEWS", 100)
+	if err != nil {
+		return Config{}, fmt.Errorf("MAX_VIEWS: %w", err)
+	}
+	if cfg.MaxViews < 1 || cfg.MaxViews > 10000 {
+		return Config{}, fmt.Errorf("MAX_VIEWS must be between 1 and 10000")
 	}
 	cfg.IDLengthBytes, err = getenvInt("ID_LENGTH_BYTES", 24)
 	if err != nil {

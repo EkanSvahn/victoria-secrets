@@ -47,7 +47,7 @@ func main() {
 	}
 
 	repo := redisadapter.New(redisClient)
-	service := applayer.NewService(repo, cfg.MaxTTLSeconds, cfg.IDLengthBytes)
+	service := applayer.NewService(repo, cfg.MaxTTLSeconds, cfg.MaxViews, cfg.IDLengthBytes)
 	server := httpadapter.NewServer(cfg, service)
 
 	shutdown := make(chan os.Signal, 1)

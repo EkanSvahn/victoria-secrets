@@ -8,6 +8,8 @@ const REQUIRE_PASSWORD = (import.meta.env.VITE_REQUIRE_PASSWORD ?? 'false').toLo
 const text = ref('')
 const mode = ref<'text' | 'file'>('text')
 const file = ref<File | null>(null)
+const lifetimeMode = ref<'views' | 'ttl'>('views')
+const views = ref(1)
 const ttlMinutes = ref(60)
 const password = ref('')
 const error = ref('')
@@ -15,7 +17,8 @@ const link = ref('')
 const loading = ref(false)
 
 const canSubmit = computed(() => {
-  if (ttlMinutes.value < 1) return false
+  if (lifetimeMode.value === 'views' && views.value < 1) return false
+  if (lifetimeMode.value === 'ttl' && ttlMinutes.value < 1) return false
   if (REQUIRE_PASSWORD && password.value.trim().length < 8) return false
   if (mode.value === 'text') return text.value.trim().length > 0
   return file.value !== null
@@ -54,7 +57,9 @@ async function onSubmit() {
       meta: encrypted.meta,
       ciphertext: encrypted.ciphertext,
       kind: mode.value,
-      ttl_seconds: ttlMinutes.value * 60
+      ...(lifetimeMode.value === 'ttl'
+        ? { ttl_seconds: ttlMinutes.value * 60 }
+        : { views: views.value })
     })
 
     const base = `${window.location.origin}/s/${created.id}`
@@ -98,8 +103,28 @@ async function onSubmit() {
 
     <div class="row">
       <label>
-        TTL (minutes)
-        <input v-model.number="ttlMinutes" type="number" min="1" max="1440" />
+        Expiration mode
+        <select v-model="lifetimeMode">
+          <option value="views">Views (default)</option>
+          <option value="ttl">Time (minutes)</option>
+        </select>
+      </label>
+      <label>
+        {{ lifetimeMode === 'views' ? 'Views' : 'TTL (minutes)' }}
+        <input
+          v-if="lifetimeMode === 'views'"
+          v-model.number="views"
+          type="number"
+          min="1"
+          max="100"
+        />
+        <input
+          v-else
+          v-model.number="ttlMinutes"
+          type="number"
+          min="1"
+          max="1440"
+        />
       </label>
 
       <label>
