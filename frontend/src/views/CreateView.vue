@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { createSecret, getStatus } from '../api/client'
+import { createSecret, getStatus, toApiErrorMessage } from '../api/client'
 import { encryptFile, encryptText } from '../api/crypto'
 
 type StatusPolicy = {
@@ -28,6 +28,15 @@ const password = ref('')
 const error = ref('')
 const link = ref('')
 const loading = ref(false)
+const statusLoaded = ref(false)
+
+const policyMaxFileText = computed(() => formatBytes(status.value.maxFileBytes))
+const allowedMimeText = computed(() =>
+  status.value.allowedFileMIMEs.length > 0 ? status.value.allowedFileMIMEs.join(', ') : 'Any'
+)
+const passwordHelpText = computed(() =>
+  status.value.requirePassword ? 'Required by policy (min 8 chars).' : 'Optional. Leave blank to use URL fragment key.'
+)
 
 const canSubmit = computed(() => {
   if (lifetimeMode.value === 'views' && views.value < 1) return false
@@ -51,8 +60,10 @@ onMounted(async () => {
     }
     if (views.value > status.value.maxViews) views.value = status.value.maxViews
     if (ttlMinutes.value > status.value.maxTTLMinutes) ttlMinutes.value = status.value.maxTTLMinutes
+    statusLoaded.value = true
   } catch {
     // Keep safe local defaults if backend status is temporarily unavailable.
+    statusLoaded.value = false
   }
 })
 
@@ -76,7 +87,7 @@ async function onSubmit() {
         throw new Error('Please select a file.')
       }
       if (file.value.size > status.value.maxFileBytes) {
-        throw new Error(`File too large. Max ${Math.floor(status.value.maxFileBytes / (1024 * 1024))} MiB.`)
+        throw new Error(`File too large. Max ${policyMaxFileText.value}.`)
       }
       if (status.value.allowedFileMIMEs.length > 0 && !status.value.allowedFileMIMEs.includes(file.value.type || 'application/octet-stream')) {
         throw new Error('File type is not allowed by server policy.')
@@ -103,10 +114,16 @@ async function onSubmit() {
       throw new Error('Password-only mode is enabled; fragment key links are not allowed.')
     }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to create secret'
+    error.value = toApiErrorMessage(err, 'Failed to create secret.')
   } finally {
     loading.value = false
   }
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${Math.floor(bytes / (1024 * 1024))} MiB`
+  if (bytes >= 1024) return `${Math.floor(bytes / 1024)} KiB`
+  return `${bytes} B`
 }
 </script>
 
@@ -114,6 +131,15 @@ async function onSubmit() {
   <section class="card">
     <h1>VaultDrop</h1>
     <p>Create a one-time secret link for text or a file with client-side encryption.</p>
+    <p class="policy">
+      Policy:
+      max views {{ status.maxViews }},
+      max TTL {{ status.maxTTLMinutes }} minutes,
+      max file {{ policyMaxFileText }},
+      allowed MIME {{ allowedMimeText }},
+      password {{ status.requirePassword ? 'required' : 'optional' }}.
+    </p>
+    <p v-if="!statusLoaded" class="policy warn">Using fallback limits because `/api/status` is unavailable.</p>
 
     <div class="row mode-row">
       <label class="mode-option">
@@ -131,9 +157,10 @@ async function onSubmit() {
       <textarea v-model="text" rows="8" placeholder="Paste secret text..."></textarea>
     </label>
     <label v-else>
-      File (max {{ Math.floor(status.maxFileBytes / (1024 * 1024)) }} MiB)
+      File (max {{ policyMaxFileText }})
       <input type="file" @change="onFileChange" />
       <small v-if="file">{{ file.name }} ({{ file.size }} bytes)</small>
+      <small>Allowed MIME types: {{ allowedMimeText }}</small>
     </label>
 
     <div class="row">
@@ -169,6 +196,7 @@ async function onSubmit() {
           type="password"
           :placeholder="status.requirePassword ? 'Required (min 8 chars)' : 'Leave blank for auto key in URL fragment'"
         />
+        <small>{{ passwordHelpText }}</small>
       </label>
     </div>
     <p v-if="status.requirePassword">
@@ -196,5 +224,15 @@ async function onSubmit() {
   flex-direction: row;
   gap: 0.5rem;
   align-items: center;
+}
+
+.policy {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #374b63;
+}
+
+.warn {
+  color: #8a5b08;
 }
 </style>

@@ -1,12 +1,12 @@
 # TODO
 
 ## Current Priorities
-- [ ] Add backend integration tests for critical secure flows:
-  - [ ] create with default one-time behavior (`views=1`) and verify second consume is `404`
-  - [ ] file secret create request rejects when file metadata exceeds size limit
-  - [ ] file secret create request rejects when MIME type is not allowed
-  - [ ] password-only mode rejects create request without KDF metadata
-- [ ] Frontend UX polish for policy-driven limits and API errors
+- [x] Add backend integration tests for critical secure flows:
+  - [x] create with default one-time behavior (`views=1`) and verify second consume is `404`
+  - [x] file secret create request rejects when file metadata exceeds size limit
+  - [x] file secret create request rejects when MIME type is not allowed
+  - [x] password-only mode rejects create request without KDF metadata
+- [x] Frontend UX polish for policy-driven limits and API errors
 - [ ] Prepare `v0.1.0` release baseline and deployment runbook
 
 ## Security Hardening Backlog
