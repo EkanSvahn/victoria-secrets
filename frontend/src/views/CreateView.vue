@@ -1,16 +1,29 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { createSecret } from '../api/client'
-import { encryptText } from '../api/crypto'
+import { encryptFile, encryptText } from '../api/crypto'
 
+const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024
 const text = ref('')
+const mode = ref<'text' | 'file'>('text')
+const file = ref<File | null>(null)
 const ttlMinutes = ref(60)
 const password = ref('')
 const error = ref('')
 const link = ref('')
 const loading = ref(false)
 
-const canSubmit = computed(() => text.value.trim().length > 0 && ttlMinutes.value >= 1)
+const canSubmit = computed(() => {
+  if (ttlMinutes.value < 1) return false
+  if (mode.value === 'text') return text.value.trim().length > 0
+  return file.value !== null
+})
+
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const picked = input.files?.[0] ?? null
+  file.value = picked
+}
 
 async function onSubmit() {
   if (!canSubmit.value) return
@@ -18,11 +31,24 @@ async function onSubmit() {
   link.value = ''
   loading.value = true
   try {
-    const encrypted = await encryptText(text.value, password.value || undefined)
+    if (mode.value === 'file') {
+      if (!file.value) {
+        throw new Error('Please select a file.')
+      }
+      if (file.value.size > MAX_FILE_SIZE_BYTES) {
+        throw new Error('File too large. Max 4 MiB.')
+      }
+    }
+
+    const encrypted =
+      mode.value === 'text'
+        ? await encryptText(text.value, password.value || undefined)
+        : await encryptFile(file.value as File, password.value || undefined)
+
     const created = await createSecret({
       meta: encrypted.meta,
       ciphertext: encrypted.ciphertext,
-      kind: 'text',
+      kind: mode.value,
       ttl_seconds: ttlMinutes.value * 60
     })
 
@@ -39,11 +65,27 @@ async function onSubmit() {
 <template>
   <section class="card">
     <h1>VaultDrop</h1>
-    <p>Create a one-time secret link with client-side encryption.</p>
+    <p>Create a one-time secret link for text or a file with client-side encryption.</p>
 
-    <label>
+    <div class="row mode-row">
+      <label class="mode-option">
+        <input v-model="mode" type="radio" value="text" />
+        Text
+      </label>
+      <label class="mode-option">
+        <input v-model="mode" type="radio" value="file" />
+        File
+      </label>
+    </div>
+
+    <label v-if="mode === 'text'">
       Secret text
       <textarea v-model="text" rows="8" placeholder="Paste secret text..."></textarea>
+    </label>
+    <label v-else>
+      File (max 4 MiB)
+      <input type="file" @change="onFileChange" />
+      <small v-if="file">{{ file.name }} ({{ file.size }} bytes)</small>
     </label>
 
     <div class="row">
@@ -67,3 +109,17 @@ async function onSubmit() {
     </label>
   </section>
 </template>
+
+<style scoped>
+.mode-row {
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+}
+
+.mode-option {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+}
+</style>

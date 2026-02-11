@@ -4,6 +4,7 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 
 ## Core Properties
 - Client-side encryption for secret content
+- Supports both text and single-file secret payloads
 - One-time retrieval semantics (`consume` deletes atomically)
 - TTL-based expiry in Redis
 - Optional password-derived key flow
@@ -30,5 +31,6 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 - The secret key is either in URL fragment (`#...`) or derived from user password.
 - URL fragments are not sent to the server by browsers.
 - Backend never receives plaintext secret in default flow.
+- Frontend currently enforces a 4 MiB max file upload for secure performance bounds.
 
 Read `docs/threat-model.md` and `docs/security-checklist.md` before production deployment.

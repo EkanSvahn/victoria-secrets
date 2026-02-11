@@ -17,7 +17,7 @@ services:
       MAX_TTL_SECONDS: "86400"
       ID_LENGTH_BYTES: "24"
       REQUEST_TIMEOUT_MS: "5000"
-      ALLOWED_ORIGIN: "http://localhost:5173"
+      ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
       RATE_LIMIT_RPM: "60"
       RATE_LIMIT_BURST: "20"
     depends_on:
