@@ -10,11 +10,13 @@ import (
 
 	"victora-secret-code/backend/internal/app"
 	"victora-secret-code/backend/internal/domain"
+	"victora-secret-code/backend/internal/metrics"
 )
 
 type Handler struct {
 	service *app.Service
 	limits  RequestLimits
+	metrics *metrics.Counters
 }
 
 type RequestLimits struct {
@@ -25,8 +27,11 @@ type RequestLimits struct {
 
 var base64URLPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-func NewHandler(service *app.Service, limits RequestLimits) *Handler {
-	return &Handler{service: service, limits: limits}
+func NewHandler(service *app.Service, limits RequestLimits, counters *metrics.Counters) *Handler {
+	if counters == nil {
+		counters = metrics.NewCounters()
+	}
+	return &Handler{service: service, limits: limits, metrics: counters}
 }
 
 type createSecretRequest struct {
@@ -48,6 +53,7 @@ type consumeSecretResponse struct {
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/health", h.health)
+	mux.HandleFunc("GET /api/metrics", h.getMetrics)
 	mux.HandleFunc("POST /api/v1/secrets", h.createSecret)
 	mux.HandleFunc("GET /api/v1/secrets/{id}", h.previewSecret)
 	mux.HandleFunc("POST /api/v1/secrets/{id}/consume", h.consumeSecret)
@@ -55,6 +61,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *Handler) getMetrics(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, h.metrics.Snapshot())
 }
 
 func (h *Handler) createSecret(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +100,7 @@ func (h *Handler) createSecret(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal_error", "could not create secret")
 		return
 	}
+	h.metrics.IncCreate()
 	writeJSON(w, http.StatusCreated, createSecretResponse{ID: id})
 }
 
@@ -222,6 +233,7 @@ func (h *Handler) previewSecret(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !exists {
+		h.metrics.IncNotFound()
 		writeError(w, http.StatusNotFound, "not_found", "secret not found")
 		return
 	}
@@ -237,11 +249,13 @@ func (h *Handler) consumeSecret(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, app.ErrNotFound) {
+			h.metrics.IncNotFound()
 			writeError(w, http.StatusNotFound, "not_found", "secret not found")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, "internal_error", "could not consume secret")
 		return
 	}
+	h.metrics.IncConsume()
 	writeJSON(w, http.StatusOK, consumeSecretResponse{Meta: secret.Meta, Ciphertext: secret.Ciphertext, Kind: string(secret.Kind)})
 }

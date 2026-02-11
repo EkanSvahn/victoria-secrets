@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"victora-secret-code/backend/internal/metrics"
 )
 
 type tokenBucket struct {
@@ -53,7 +55,7 @@ func (l *Limiter) Allow(key string, now time.Time) bool {
 	return true
 }
 
-func rateLimit(limiter *Limiter) func(http.Handler) http.Handler {
+func rateLimit(limiter *Limiter, counters *metrics.Counters) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			routeKey, protected := classifyProtectedRoute(r.Method, r.URL.Path)
@@ -63,6 +65,9 @@ func rateLimit(limiter *Limiter) func(http.Handler) http.Handler {
 			}
 			key := clientIP(r) + "|" + routeKey
 			if !limiter.Allow(key, time.Now()) {
+				if counters != nil {
+					counters.IncRateLimited()
+				}
 				w.Header().Set("Retry-After", "60")
 				writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
 				return

@@ -7,15 +7,17 @@ import (
 
 	"victora-secret-code/backend/internal/app"
 	"victora-secret-code/backend/internal/config"
+	"victora-secret-code/backend/internal/metrics"
 )
 
 func NewServer(cfg config.Config, service *app.Service) *http.Server {
 	mux := http.NewServeMux()
+	counters := metrics.NewCounters()
 	handler := NewHandler(service, RequestLimits{
 		MaxMetaBytes:   cfg.MaxMetaBytes,
 		MaxCipherBytes: cfg.MaxCipherBytes,
 		RequirePassword: cfg.RequirePassword,
-	})
+	}, counters)
 	handler.RegisterRoutes(mux)
 	limiter := NewLimiter(cfg.RateLimitRPM, cfg.RateLimitBurst)
 
@@ -25,7 +27,7 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 		requestLogger(slog.Default()),
 		securityHeaders,
 		cors(cfg.AllowedOrigins),
-		rateLimit(limiter),
+		rateLimit(limiter, counters),
 		withBodyLimit(cfg.MaxBodyBytes),
 		withTimeout(cfg.RequestTimeout),
 	)
