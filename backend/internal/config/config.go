@@ -9,22 +9,23 @@ import (
 )
 
 type Config struct {
-	ListenAddr      string
-	RedisURL        string
-	MaxBodyBytes    int64
-	MaxMetaBytes    int
-	MaxCipherBytes  int
-	MaxFileBytes    int64
-	AllowedFileMIMEs []string
-	MaxTTLSeconds   int64
-	MaxViews        int64
-	IDLengthBytes   int
-	RequestTimeout  time.Duration
-	AllowedOrigins  []string
-	TrustedProxyCID string
-	RateLimitRPM    int
-	RateLimitBurst  int
-	RequirePassword bool
+	ListenAddr           string
+	RedisURL             string
+	MaxBodyBytes         int64
+	MaxMetaBytes         int
+	MaxCipherBytes       int
+	MaxFileBytes         int64
+	AllowedFileMIMEs     []string
+	MaxTTLSeconds        int64
+	MaxViews             int64
+	IDLengthBytes        int
+	RequestTimeout       time.Duration
+	AllowedOrigins       []string
+	TrustedProxyCID      string
+	RateLimitRPM         int
+	RateLimitBurst       int
+	MetricsEnabled       bool
+	RequirePassword      bool
 	StrictRedisEphemeral bool
 }
 
@@ -102,6 +103,10 @@ func Load() (Config, error) {
 	}
 	if cfg.RateLimitBurst < 1 || cfg.RateLimitBurst > 10000 {
 		return Config{}, fmt.Errorf("RATE_LIMIT_BURST must be between 1 and 10000")
+	}
+	cfg.MetricsEnabled, err = getenvBool("METRICS_ENABLED", false)
+	if err != nil {
+		return Config{}, fmt.Errorf("METRICS_ENABLED: %w", err)
 	}
 	cfg.RequirePassword, err = getenvBool("REQUIRE_PASSWORD", false)
 	if err != nil {

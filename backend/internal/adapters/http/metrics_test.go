@@ -18,7 +18,7 @@ func TestMetricsEndpointReturnsCounters(t *testing.T) {
 
 	handler := NewHandler(nil, RequestLimits{}, counters)
 	mux := http.NewServeMux()
-	handler.RegisterRoutes(mux)
+	handler.RegisterRoutes(mux, true)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/metrics", nil)
 	res := httptest.NewRecorder()
@@ -48,7 +48,7 @@ func TestStatusEndpointReturnsLimits(t *testing.T) {
 	}
 	handler := NewHandler(nil, limits, counters)
 	mux := http.NewServeMux()
-	handler.RegisterRoutes(mux)
+	handler.RegisterRoutes(mux, false)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/status", nil)
 	res := httptest.NewRecorder()
@@ -67,5 +67,20 @@ func TestStatusEndpointReturnsLimits(t *testing.T) {
 	}
 	if got["require_password"] != true {
 		t.Fatalf("unexpected require_password: %v", got["require_password"])
+	}
+}
+
+func TestMetricsEndpointDisabledByConfig(t *testing.T) {
+	counters := metrics.NewCounters()
+	handler := NewHandler(nil, RequestLimits{}, counters)
+	mux := http.NewServeMux()
+	handler.RegisterRoutes(mux, false)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/metrics", nil)
+	res := httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+
+	if res.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 when metrics disabled, got %d", res.Code)
 	}
 }
