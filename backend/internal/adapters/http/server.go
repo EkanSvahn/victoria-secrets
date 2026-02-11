@@ -11,7 +11,10 @@ import (
 
 func NewServer(cfg config.Config, service *app.Service) *http.Server {
 	mux := http.NewServeMux()
-	handler := NewHandler(service)
+	handler := NewHandler(service, RequestLimits{
+		MaxMetaBytes:   cfg.MaxMetaBytes,
+		MaxCipherBytes: cfg.MaxCipherBytes,
+	})
 	handler.RegisterRoutes(mux)
 	limiter := NewLimiter(cfg.RateLimitRPM, cfg.RateLimitBurst)
 
