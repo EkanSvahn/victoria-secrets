@@ -6,7 +6,9 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
+	"unicode"
 
 	"victora-secret-code/backend/internal/app"
 	"victora-secret-code/backend/internal/domain"
@@ -22,6 +24,8 @@ type Handler struct {
 type RequestLimits struct {
 	MaxMetaBytes   int
 	MaxCipherBytes int
+	MaxFileBytes   int64
+	AllowedFileMIMEs []string
 	RequirePassword bool
 }
 
@@ -136,6 +140,14 @@ func validateCreateSecretRequest(req createSecretRequest, limits RequestLimits) 
 	if limits.RequirePassword && parsedMeta.KDF == "" {
 		return errors.New("password-only mode is enabled")
 	}
+	if kind == string(domain.SecretKindFile) {
+		if parsedMeta.FileSize > limits.MaxFileBytes {
+			return errors.New("file exceeds maximum allowed size")
+		}
+		if len(limits.AllowedFileMIMEs) > 0 && !slices.Contains(limits.AllowedFileMIMEs, parsedMeta.MimeType) {
+			return errors.New("file mime type is not allowed")
+		}
+	}
 	return nil
 }
 
@@ -186,6 +198,9 @@ func parseAndValidateMeta(meta, kind string) (*metaPayload, error) {
 		if parsed.FileSize <= 0 {
 			return nil, errors.New("file metadata must include positive size")
 		}
+		if !isSafeFileName(parsed.FileName) {
+			return nil, errors.New("invalid file name")
+		}
 	}
 	return &parsed, nil
 }
@@ -219,6 +234,22 @@ func validateKDF(meta metaPayload) error {
 		return errors.New("unsupported kdf")
 	}
 	return nil
+}
+
+func isSafeFileName(name string) bool {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" || len(trimmed) > 255 {
+		return false
+	}
+	if strings.Contains(trimmed, "/") || strings.Contains(trimmed, "\\") || strings.Contains(trimmed, "..") {
+		return false
+	}
+	for _, r := range trimmed {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
 }
 
 func (h *Handler) previewSecret(w http.ResponseWriter, r *http.Request) {

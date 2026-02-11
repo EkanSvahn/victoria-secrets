@@ -35,6 +35,16 @@ func main() {
 		slog.Error("redis ping failed", "error", err.Error())
 		os.Exit(1)
 	}
+	if cfg.StrictRedisEphemeral {
+		if err := redisadapter.CheckEphemeralConfig(ctx, redisClient); err != nil {
+			slog.Error("redis ephemeral self-check failed", "error", err.Error())
+			os.Exit(1)
+		}
+	} else {
+		if err := redisadapter.CheckEphemeralConfig(ctx, redisClient); err != nil {
+			slog.Warn("redis ephemeral self-check warning", "error", err.Error())
+		}
+	}
 
 	repo := redisadapter.New(redisClient)
 	service := applayer.NewService(repo, cfg.MaxTTLSeconds, cfg.IDLengthBytes)
