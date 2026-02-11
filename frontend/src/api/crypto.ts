@@ -1,3 +1,5 @@
+import { argon2id } from '@noble/hashes/argon2'
+
 function bytesToBinary(bytes: Uint8Array): string {
   let binary = ''
   const chunk = 0x8000
@@ -38,8 +40,11 @@ interface SecretMeta {
   v: 1
   t: 'text' | 'file'
   alg: 'AES-GCM-256'
-  kdf?: 'PBKDF2-SHA256'
+  kdf?: 'PBKDF2-SHA256' | 'ARGON2ID'
   i?: 310000
+  tm?: number
+  tt?: number
+  tp?: number
   s?: string
   n?: string
   m?: string
@@ -51,7 +56,7 @@ interface Payload {
   ct: string
 }
 
-async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+async function derivePBKDF2Key(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const material = await crypto.subtle.importKey('raw', encodeUtf8(password), 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
     {
@@ -65,6 +70,25 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
     false,
     ['encrypt', 'decrypt']
   )
+}
+
+async function deriveArgon2IDRaw(password: string, salt: Uint8Array): Promise<Uint8Array> {
+  // Browser-safe Argon2id defaults.
+  const timeCost = 3
+  const memoryKiB = 65536
+  const parallelism = 1
+  const derived = argon2id(password, salt, {
+    t: timeCost,
+    m: memoryKiB,
+    p: parallelism,
+    dkLen: 32
+  })
+  return new Uint8Array(derived)
+}
+
+async function deriveArgon2IDKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+  const raw = await deriveArgon2IDRaw(password, salt)
+  return importAesKey(raw)
 }
 
 async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
@@ -89,8 +113,8 @@ async function resolveKey(password?: string): Promise<{ key: CryptoKey; linkSecr
   let metaPatch: Partial<SecretMeta> = {}
 
   if (password && password.trim() !== '') {
-    key = await deriveKey(password, salt)
-    metaPatch = { kdf: 'PBKDF2-SHA256', i: 310000, s: toBase64Url(salt) }
+    key = await deriveArgon2IDKey(password, salt)
+    metaPatch = { kdf: 'ARGON2ID', tt: 3, tm: 65536, tp: 1, s: toBase64Url(salt) }
   } else {
     key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
     linkSecret = toBase64Url(await exportAesKey(key))
@@ -122,7 +146,13 @@ async function decryptBytes(ciphertext: string, metaRaw: string, linkSecret: str
 
   let key: CryptoKey
   if (password && meta.s) {
-    key = await deriveKey(password, fromBase64Url(meta.s))
+    if (meta.kdf === 'PBKDF2-SHA256' || !meta.kdf) {
+      key = await derivePBKDF2Key(password, fromBase64Url(meta.s))
+    } else if (meta.kdf === 'ARGON2ID') {
+      key = await deriveArgon2IDKey(password, fromBase64Url(meta.s))
+    } else {
+      throw new Error('Unsupported KDF')
+    }
   } else {
     key = await importAesKey(fromBase64Url(linkSecret))
   }

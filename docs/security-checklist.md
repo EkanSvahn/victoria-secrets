@@ -1,12 +1,13 @@
 # Security Checklist
 
 ## Must Before Internet Exposure
-- [ ] Run behind HTTPS reverse proxy with HSTS.
+- [x] Run behind HTTPS reverse proxy with HSTS.
 - [ ] Restrict Redis to private subnet and firewall rules.
-- [ ] Set production `ALLOWED_ORIGIN`.
+- [ ] Set production `ALLOWED_ORIGINS`.
 - [x] Add API rate limiting (per IP and endpoint).
 - [ ] Configure alerting on 4xx/5xx spikes.
-- [ ] Enable container image and dependency scanning in CI.
+- [x] Enable dependency scanning in CI.
+- [ ] Enable container image scanning in CI.
 
 ## Nice Next
 - [ ] Add encrypted metadata backup strategy (no plaintext content).

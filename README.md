@@ -7,10 +7,11 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 - Supports both text and single-file secret payloads
 - One-time retrieval semantics (`consume` deletes atomically)
 - TTL-based expiry in Redis
-- Optional password-derived key flow
+- Password-derived key flow now defaults to Argon2id
 - Minimal server-side metadata and strict security headers
 - IP-based token-bucket rate limiting on secret endpoints
 - Structured request logs (request id, route template, status, latency) without secret payloads
+- Optional password-only mode (disables fragment-key links)
 
 ## Stack
 - Backend: Go (`net/http`), Redis
@@ -21,6 +22,13 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 1. `cd infra`
 2. `docker compose -f docker-compose.dev.yml up --build`
 3. Open `http://localhost:5173`
+
+## Production Baseline
+1. Set domain in `infra/Caddyfile.prod` (replace `vaultdrop.example.com`).
+2. Use `docker compose -f infra/docker-compose.prod.yml up --build -d`.
+3. Proxy terminates TLS, applies HSTS/security headers, and routes:
+   - `/api/*` -> backend
+   - all other paths -> frontend
 
 ## API (MVP)
 - `GET /api/health`
@@ -33,6 +41,8 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 - URL fragments are not sent to the server by browsers.
 - Backend never receives plaintext secret in default flow.
 - Frontend currently enforces a 4 MiB max file upload for secure performance bounds.
-- Backend enforces request validation and payload size caps for `meta` and `ciphertext`.
+- Backend enforces strict `meta` schema + payload size caps for `meta` and `ciphertext`.
+- In password mode, metadata includes KDF parameters and salt; plaintext key is never sent.
+- Legacy PBKDF2 links remain decryptable; new password-protected secrets use Argon2id.
 
-Read `docs/threat-model.md` and `docs/security-checklist.md` before production deployment.
+Read `docs/threat-model.md`, `docs/security-checklist.md`, and `docs/production-hardening.md` before production deployment.

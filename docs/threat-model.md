@@ -31,7 +31,8 @@
 ## Key Controls
 - AES-GCM encryption in client
 - URL fragment key handling when no custom password is used
-- Optional password with PBKDF2-derived key
+- Optional password with Argon2id-derived key (legacy PBKDF2 compatibility for old links)
+- Optional password-only deployment mode to disable fragment key links
 - Redis Lua consume script to GET+DEL atomically
 - Strict HTTP security headers
 - No sensitive payload logging

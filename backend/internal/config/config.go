@@ -21,6 +21,7 @@ type Config struct {
 	TrustedProxyCID string
 	RateLimitRPM    int
 	RateLimitBurst  int
+	RequirePassword bool
 }
 
 func Load() (Config, error) {
@@ -83,6 +84,10 @@ func Load() (Config, error) {
 	if cfg.RateLimitBurst < 1 || cfg.RateLimitBurst > 10000 {
 		return Config{}, fmt.Errorf("RATE_LIMIT_BURST must be between 1 and 10000")
 	}
+	cfg.RequirePassword, err = getenvBool("REQUIRE_PASSWORD", false)
+	if err != nil {
+		return Config{}, fmt.Errorf("REQUIRE_PASSWORD: %w", err)
+	}
 	timeoutMs, err := getenvInt64("REQUEST_TIMEOUT_MS", 5000)
 	if err != nil {
 		return Config{}, fmt.Errorf("REQUEST_TIMEOUT_MS: %w", err)
@@ -120,6 +125,18 @@ func getenvInt64(key string, fallback int64) (int64, error) {
 	parsed, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return 0, err
+	}
+	return parsed, nil
+}
+
+func getenvBool(key string, fallback bool) (bool, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, err
 	}
 	return parsed, nil
 }
