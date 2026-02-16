@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
 import { onMounted, ref } from 'vue'
 
 const appVersion = __APP_VERSION__.startsWith('v') ? __APP_VERSION__ : `v${__APP_VERSION__}`
 const theme = ref<'light' | 'dark'>('dark')
 const logoSrc = ref('/logo-light.svg')
+const route = useRoute()
+const codeUrl = (import.meta.env.VITE_CODE_URL as string | undefined) ?? 'https://github.com'
 
 onMounted(() => {
   const stored = localStorage.getItem('vaultdrop-theme')
@@ -29,6 +32,11 @@ function applyTheme(nextTheme: 'light' | 'dark') {
 
 <template>
   <main class="page">
+    <nav class="nav">
+      <router-link to="/secret" :class="{ active: route.path === '/secret' }">/secret</router-link>
+      <router-link to="/info" :class="{ active: route.path === '/info' }">/info</router-link>
+      <a :href="codeUrl" target="_blank" rel="noreferrer noopener">/code</a>
+    </nav>
     <img class="brand-logo" :src="logoSrc" alt="VaultDrop logo" />
     <router-view />
     <button class="theme-fab" type="button" @click="toggleTheme">{{ theme === 'dark' ? 'light' : 'dark' }}</button>
@@ -37,6 +45,27 @@ function applyTheme(nextTheme: 'light' | 'dark') {
 </template>
 
 <style scoped>
+.nav {
+  position: fixed;
+  top: 0.8rem;
+  right: 1rem;
+  display: inline-flex;
+  gap: 0.65rem;
+  z-index: 20;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+}
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.nav a:hover,
+.nav a.active {
+  color: var(--accent);
+}
+
 .brand-logo {
   width: min(360px, 72vw);
   height: auto;
