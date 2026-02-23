@@ -1,6 +1,10 @@
-# VaultDrop (Inspired-by Secure Secret Sharing)
+# Ephemeral
 
-VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Cryptgeon concepts but implemented with a different architecture and stronger operational defaults.
+Ephemeral is a secure secret-sharing application for one-time or time-limited sharing of notes and files.
+
+It is designed for self-hosted use, with client-side encryption in the browser and server-side storage of ciphertext only.
+The project is inspired by the broader encrypted secret-sharing pattern (including tools like PrivNote and Cryptgeon), but
+focuses on a Go + Vue stack and clear operational hardening defaults.
 
 ## Core Properties
 - Client-side encryption for secret content
@@ -12,6 +16,27 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 - IP-based token-bucket rate limiting on secret endpoints
 - Structured request logs (request id, route template, status, latency) without secret payloads
 - Optional password-only mode (disables fragment-key links)
+
+## What Ephemeral Does
+- Encrypts secrets in the browser before upload
+- Stores encrypted payloads in Redis with expiry / view limits
+- Generates share links for one-time or time-limited retrieval
+- Supports optional password-based decryption flow
+- Provides policy and status endpoints for deployment visibility
+
+## Security Posture
+Ephemeral is intended to be a highly secure way to share secrets when it is configured and operated correctly.
+
+Security comes from the combination of:
+- Client-side encryption (server stores ciphertext, not plaintext)
+- One-time / limited-view and TTL-based destruction
+- Password-derived keys (Argon2id for new password-protected secrets)
+- Strict server-side validation and payload limits
+- Rate limiting and security headers
+- TLS termination and reverse-proxy hardening
+- Optional Redis ephemeral-mode enforcement checks
+
+This reduces exposure significantly, but does not eliminate all risk.
 
 ## Stack
 - Backend: Go (`net/http`), Redis
@@ -52,5 +77,15 @@ VaultDrop is a from-scratch Go + Vue secure secret-sharing app inspired by Crypt
 - In password mode, metadata includes KDF parameters and salt; plaintext key is never sent.
 - Legacy PBKDF2 links remain decryptable; new password-protected secrets use Argon2id.
 - Startup performs Redis ephemeral-mode self-check (`appendonly=no`, `save=""`) when strict mode is enabled.
+
+## Security Limitations (Important)
+Ephemeral does not protect against:
+- Compromised sender or recipient devices/browsers
+- Weak or reused passwords
+- Secrets copied into insecure systems after decryption
+- Unsafe sharing of links/passwords through insecure channels
+- Deployment misconfiguration (DNS, TLS, headers, logging, policy settings)
+
+Use it as a hardened transport-and-sharing mechanism, not as a substitute for endpoint security or operational hygiene.
 
 Read `docs/threat-model.md`, `docs/security-checklist.md`, `docs/production-hardening.md`, and `docs/deployment-runbook.md` before production deployment.

@@ -9,7 +9,7 @@ const route = useRoute()
 const codeUrl = (import.meta.env.VITE_CODE_URL as string | undefined) ?? 'https://github.com'
 
 onMounted(() => {
-  const stored = localStorage.getItem('vaultdrop-theme')
+  const stored = localStorage.getItem('ephemeral-theme') ?? localStorage.getItem('vaultdrop-theme')
   if (stored === 'light' || stored === 'dark') {
     theme.value = stored
   } else {
@@ -21,7 +21,7 @@ onMounted(() => {
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
   applyTheme(theme.value)
-  localStorage.setItem('vaultdrop-theme', theme.value)
+  localStorage.setItem('ephemeral-theme', theme.value)
 }
 
 function applyTheme(nextTheme: 'light' | 'dark') {
@@ -37,7 +37,7 @@ function applyTheme(nextTheme: 'light' | 'dark') {
       <router-link to="/info" :class="{ active: route.path === '/info' }">/info</router-link>
       <a :href="codeUrl" target="_blank" rel="noreferrer noopener">/code</a>
     </nav>
-    <img class="brand-logo" :src="logoSrc" alt="VaultDrop logo" />
+    <img class="brand-logo" :src="logoSrc" alt="Ephemeral logo" />
     <router-view />
     <button class="theme-fab" type="button" @click="toggleTheme">{{ theme === 'dark' ? 'light' : 'dark' }}</button>
     <div class="version-badge" aria-label="app-version">{{ appVersion }}</div>
