@@ -6,8 +6,8 @@ const appVersion = __APP_VERSION__.startsWith('v') ? __APP_VERSION__ : `v${__APP
   <section class="card info-card">
     <h1>about</h1>
     <p>
-      Ephemeral is a secure, open-source secret sharing app inspired by Cryptgeon, implemented with a different stack and
-      hardened operational defaults.
+      Ephemeral is a secure, open-source secret sharing app inspired by tools like PrivNote and Cryptgeon, implemented
+      with a different stack and a strong focus on clear security defaults.
     </p>
 
     <h2>how it works</h2>
@@ -18,14 +18,22 @@ const appVersion = __APP_VERSION__.startsWith('v') ? __APP_VERSION__ : `v${__APP
 
     <h2>security model</h2>
     <p>
-      Client-side encryption, optional password-derived keys (Argon2id), one-time view defaults, strict input validation,
-      and rate limiting are enabled to reduce exposure and abuse risk.
+      The security model focuses on client-side encryption, optional password-derived keys (Argon2id), one-time view
+      defaults, strict input validation, rate limiting, and defensive HTTP headers. The goal is to reduce exposure and
+      abuse risk without adding unnecessary complexity.
     </p>
 
     <h2>runtime and storage</h2>
     <p>
-      Secrets are stored in Redis with expiry/view constraints. For stricter deployments, ephemeral mode checks can enforce
-      non-persistent Redis configuration.
+      Secrets are stored in Redis with expiry/view constraints. For stricter deployments, Redis self-checks can enforce
+      non-persistent settings so data is not written to disk.
+    </p>
+
+    <h2>what this does not protect against</h2>
+    <p>
+      This does not protect against a compromised client device or browser, weak or reused passwords, secrets copied into
+      insecure systems after decryption, or links/passwords shared through unsafe channels. Security still depends on user
+      handling and endpoint trust.
     </p>
 
     <h2>tech stack</h2>
@@ -33,8 +41,8 @@ const appVersion = __APP_VERSION__.startsWith('v') ? __APP_VERSION__ : `v${__APP
 
     <h2>open source</h2>
     <p>
-      This project is intended to be forked and audited. Use the <code>/code</code> link in navigation to access the source
-      repository.
+      This project is intended to be audited, self-hosted, and forked. Use the <code>/code</code> link in navigation to
+      access the source repository.
     </p>
 
     <p class="version">version {{ appVersion }}</p>
