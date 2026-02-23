@@ -4,7 +4,7 @@ import { onMounted, ref } from 'vue'
 
 const appVersion = __APP_VERSION__.startsWith('v') ? __APP_VERSION__ : `v${__APP_VERSION__}`
 const theme = ref<'light' | 'dark'>('dark')
-const logoSrc = ref('/logo-light.svg')
+const logoSrc = ref('/ephemeral_logo.svg')
 const route = useRoute()
 const codeUrl = (import.meta.env.VITE_CODE_URL as string | undefined) ?? 'https://github.com'
 
@@ -26,7 +26,7 @@ function toggleTheme() {
 
 function applyTheme(nextTheme: 'light' | 'dark') {
   document.documentElement.setAttribute('data-theme', nextTheme)
-  logoSrc.value = nextTheme === 'dark' ? '/logo-light.svg' : '/logo-dark.svg'
+  logoSrc.value = '/ephemeral_logo.svg'
 }
 </script>
 

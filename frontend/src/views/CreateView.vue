@@ -23,6 +23,7 @@ const text = ref('')
 const mode = ref<'text' | 'file'>('text')
 const file = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const isFileDragOver = ref(false)
 const lifetimeMode = ref<'views' | 'ttl'>('views')
 const views = ref(1)
 const ttlMinutes = ref(60)
@@ -74,11 +75,44 @@ onMounted(async () => {
 
 function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
-  file.value = input.files?.[0] ?? null
+  setSelectedFile(input.files?.[0] ?? null)
 }
 
 function openFilePicker() {
   fileInput.value?.click()
+}
+
+function setSelectedFile(next: File | null) {
+  file.value = next
+}
+
+function onFileDragOver(event: DragEvent) {
+  if (mode.value !== 'file') return
+  event.preventDefault()
+  isFileDragOver.value = true
+}
+
+function onFileDragEnter(event: DragEvent) {
+  if (mode.value !== 'file') return
+  event.preventDefault()
+  isFileDragOver.value = true
+}
+
+function onFileDragLeave(event: DragEvent) {
+  if (mode.value !== 'file') return
+  event.preventDefault()
+  const nextTarget = event.relatedTarget as Node | null
+  const currentTarget = event.currentTarget as Node | null
+  if (currentTarget && nextTarget && currentTarget.contains(nextTarget)) return
+  isFileDragOver.value = false
+}
+
+function onFileDrop(event: DragEvent) {
+  if (mode.value !== 'file') return
+  event.preventDefault()
+  isFileDragOver.value = false
+  const dropped = event.dataTransfer?.files?.[0] ?? null
+  if (dropped) setSelectedFile(dropped)
 }
 
 function resetForm() {
@@ -89,6 +123,7 @@ function resetForm() {
   error.value = ''
   link.value = ''
   mode.value = 'text'
+  isFileDragOver.value = false
   views.value = 1
   lifetimeMode.value = 'views'
 }
@@ -162,17 +197,41 @@ function formatBytes(bytes: number): string {
         <button type="button" class="toggle" :class="{ active: mode === 'file' }" @click="mode = 'file'">file</button>
       </div>
 
-      <label v-if="mode === 'text'" class="field">
-        Secret
-        <textarea v-model="text" rows="10" placeholder="Paste your secret text..."></textarea>
-      </label>
-
-      <label v-else class="field">
-        File
+      <label class="field">
+        {{ mode === 'text' ? 'Secret' : 'File' }}
         <input ref="fileInput" class="file-input-hidden" type="file" @change="onFileChange" />
-        <button type="button" class="file-picker" @click="openFilePicker">click to add file</button>
-        <small v-if="file">{{ file.name }} ({{ formatBytes(file.size) }})</small>
-        <small v-else class="file-hint">No file selected</small>
+        <div
+          class="content-panel"
+          :class="{ 'is-file': mode === 'file', 'is-drag-over': mode === 'file' && isFileDragOver }"
+          @dragenter="onFileDragEnter"
+          @dragover="onFileDragOver"
+          @dragleave="onFileDragLeave"
+          @drop="onFileDrop"
+        >
+          <Transition name="panel-fade" mode="out-in">
+            <textarea
+              v-if="mode === 'text'"
+              key="text"
+              v-model="text"
+              rows="10"
+              placeholder="Paste your secret text..."
+            ></textarea>
+
+            <div v-else key="file" class="file-panel">
+              <button type="button" class="file-picker" @click="openFilePicker">
+                {{ isFileDragOver ? 'drop file to attach' : 'click to add file' }}
+              </button>
+              <small
+                v-if="file"
+                class="file-selection"
+                :title="`${file.name} (${formatBytes(file.size)})`"
+              >
+                {{ file.name }} ({{ formatBytes(file.size) }})
+              </small>
+              <small v-else class="file-hint">{{ isFileDragOver ? 'Release to attach file' : 'No file selected' }}</small>
+            </div>
+          </Transition>
+        </div>
       </label>
 
       <div class="action-row">
@@ -188,37 +247,66 @@ function formatBytes(bytes: number): string {
         <div class="advanced-grid">
           <label>
             Expiration mode
-            <select v-model="lifetimeMode">
-              <option value="views">Views</option>
-              <option value="ttl">Time (minutes)</option>
-            </select>
+            <div class="mini-switch" role="group" aria-label="expiration mode">
+              <button
+                type="button"
+                class="mini-toggle"
+                :class="{ active: lifetimeMode === 'views' }"
+                @click="lifetimeMode = 'views'"
+              >
+                views
+              </button>
+              <button
+                type="button"
+                class="mini-toggle"
+                :class="{ active: lifetimeMode === 'ttl' }"
+                @click="lifetimeMode = 'ttl'"
+              >
+                time
+              </button>
+            </div>
           </label>
 
           <label>
             {{ lifetimeMode === 'views' ? 'Views' : 'TTL (minutes)' }}
-            <input
-              v-if="lifetimeMode === 'views'"
-              v-model.number="views"
-              type="number"
-              min="1"
-              :max="status.maxViews"
-            />
-            <input
-              v-else
-              v-model.number="ttlMinutes"
-              type="number"
-              min="1"
-              :max="status.maxTTLMinutes"
-            />
+            <div class="unit-field">
+              <input
+                v-if="lifetimeMode === 'views'"
+                v-model.number="views"
+                type="number"
+                min="1"
+                :max="status.maxViews"
+              />
+              <input
+                v-else
+                v-model.number="ttlMinutes"
+                type="number"
+                min="1"
+                :max="status.maxTTLMinutes"
+              />
+              <span class="unit-suffix">{{ lifetimeMode === 'views' ? 'views' : 'min' }}</span>
+            </div>
           </label>
 
-          <label>
+          <label class="password-advanced-field">
             Password
-            <input
-              v-model="password"
-              type="password"
-              :placeholder="status.requirePassword ? 'Required (min 8 chars)' : 'Optional'"
-            />
+            <div class="unit-field">
+              <input
+                v-model="password"
+                type="password"
+                :placeholder="status.requirePassword ? 'Enter password' : 'Leave empty for link key'"
+              />
+              <span class="unit-suffix" :class="{ 'unit-suffix-accent': status.requirePassword }">
+                {{ status.requirePassword ? 'required' : 'optional' }}
+              </span>
+            </div>
+            <small class="field-meta">
+              {{
+                status.requirePassword
+                  ? 'Minimum 8 characters. Link fragment key is disabled by policy.'
+                  : 'Adds password-based decryption. Otherwise a one-time key is stored in the URL fragment.'
+              }}
+            </small>
           </label>
         </div>
 
@@ -231,8 +319,7 @@ function formatBytes(bytes: number): string {
     </template>
 
     <template v-else>
-      <h2>Share Link</h2>
-      <p class="intro">Send this once. The secret is consumed on open.</p>
+      <p class="state-line">share link · opens once · auto-destroys after access</p>
 
       <div class="share-row">
         <input class="share-link-input" :value="link" readonly @focus="$event.target.select()" />
@@ -258,6 +345,13 @@ function formatBytes(bytes: number): string {
   padding: 1.25rem;
 }
 
+.create-card button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .mode-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -273,12 +367,16 @@ function formatBytes(bytes: number): string {
   border-radius: 0;
   background: transparent;
   color: var(--text-muted);
-  min-height: 34px;
+  min-height: 38px;
   text-align: center;
   font-family: var(--mono);
   letter-spacing: 0.02em;
   text-transform: lowercase;
   padding: 0.3rem 0.5rem;
+  transition:
+    color 100ms ease,
+    background-color 100ms ease,
+    box-shadow 100ms ease;
 }
 
 .toggle:last-child {
@@ -291,33 +389,99 @@ function formatBytes(bytes: number): string {
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-.field textarea {
+.file-input-hidden {
+  display: none;
+}
+
+.content-panel {
   min-height: 255px;
   border: 1px solid color-mix(in oklab, var(--line-strong) 86%, #8b8b8b);
   background: #151515;
-  padding: 0.72rem;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
 }
 
-.file-input-hidden {
-  display: none;
+.content-panel textarea {
+  width: 100%;
+  min-height: 255px;
+  border: none;
+  background: transparent;
+  padding: 0.72rem;
+  box-shadow: none;
+  display: block;
+}
+
+.content-panel.is-file {
+  display: grid;
+  place-items: center;
+  padding: 0.9rem;
+}
+
+.content-panel.is-drag-over {
+  border-color: var(--accent);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px var(--accent);
+  background: #121712;
+}
+
+.file-panel {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .file-picker {
   width: fit-content;
   min-width: 180px;
-  margin: 0.35rem auto 0;
+  margin: 0;
 }
 
 .file-hint {
   color: var(--text-muted);
-  margin-top: 0.45rem;
+  margin-top: 0.65rem;
   text-align: center;
+}
+
+.file-selection {
+  margin-top: 0.65rem;
+  text-align: center;
+  max-width: 100%;
+  width: min(100%, 520px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-fade-enter-active,
+.panel-fade-leave-active {
+  transition: opacity 110ms ease;
+}
+
+.panel-fade-enter-from,
+.panel-fade-leave-to {
+  opacity: 0;
 }
 
 .field small {
   margin-top: 0.45rem;
   text-align: center;
+}
+
+.field-meta {
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  line-height: 1.3;
+  text-align: left;
 }
 
 .action-row {
@@ -327,6 +491,13 @@ function formatBytes(bytes: number): string {
   gap: 1rem;
 }
 
+.action-row button:disabled {
+  opacity: 1;
+  background: #101010;
+  color: #727272;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
 .summary {
   color: var(--text-muted);
   font-family: var(--mono);
@@ -334,11 +505,17 @@ function formatBytes(bytes: number): string {
   line-height: 1.35;
 }
 
+.state-line {
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
 .advanced {
   border-top: none;
-  padding-top: 0.84rem;
   background: color-mix(in oklab, var(--panel) 84%, #1f1f1f);
-  padding: 0.88rem;
+  padding: 0.95rem;
 }
 
 .advanced summary {
@@ -346,17 +523,97 @@ function formatBytes(bytes: number): string {
   font-family: var(--mono);
   color: var(--text-muted);
   font-size: 0.86rem;
+  line-height: 1.2;
 }
 
 .advanced-grid {
-  margin-top: 0.72rem;
+  margin-top: 0.8rem;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.65rem;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.advanced-grid label {
+  gap: 0.4rem;
+  font-size: 0.86rem;
+}
+
+.password-advanced-field {
+  grid-column: span 2;
+}
+
+.mini-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #101010;
+  border: 1px solid var(--line);
+  min-height: 38px;
+}
+
+.mini-toggle {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  padding: 0.35rem 0.45rem;
+  min-height: 36px;
+  transition:
+    color 100ms ease,
+    background-color 100ms ease,
+    box-shadow 100ms ease;
+}
+
+.mini-toggle.active {
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: #151515;
+}
+
+.unit-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  background: #101010;
+}
+
+.unit-field input {
+  border: none;
+  background: transparent;
+  min-width: 0;
+  padding: 0.42rem 0.5rem;
+}
+
+.unit-field input:focus {
+  outline: none;
+}
+
+.unit-field:focus-within {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.unit-suffix {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.55rem;
+  border-left: 1px solid var(--line);
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  min-width: 84px;
+  justify-content: center;
+}
+
+.unit-suffix-accent {
+  color: var(--accent);
 }
 
 .policy-line {
-  margin-top: 0.35rem;
+  margin-top: 0.55rem;
   font-size: 0.84rem;
 }
 
@@ -388,6 +645,10 @@ function formatBytes(bytes: number): string {
 @media (max-width: 820px) {
   .advanced-grid {
     grid-template-columns: 1fr;
+  }
+
+  .password-advanced-field {
+    grid-column: auto;
   }
 
   .share-row {

@@ -20,10 +20,10 @@
 }
 
 :root[data-theme='dark'] {
-  --bg: #111111;
-  --bg-decor-a: #111111;
-  --bg-decor-b: #111111;
-  --panel: #111111;
+  --bg: #050505;
+  --bg-decor-a: #050505;
+  --bg-decor-b: #050505;
+  --panel: #050505;
   --text: #f2f2f2;
   --text-muted: #b0b0b0;
   --line: #484848;
@@ -31,7 +31,7 @@
   --accent: #c4e456;
   --accent-strong: #b4d646;
   --danger: #ff5a66;
-  --badge-bg: rgba(17, 17, 17, 0.95);
+  --badge-bg: rgba(5, 5, 5, 0.95);
   --badge-text: #efefef;
   --shadow: none;
   --radius: 0px;
