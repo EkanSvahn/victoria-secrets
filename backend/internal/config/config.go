@@ -43,7 +43,7 @@ func Load() (Config, error) {
 	cfg.AllowedOrigins = parseAllowedOrigins(allowedOriginsRaw)
 
 	var err error
-	cfg.MaxBodyBytes, err = getenvInt64("MAX_BODY_BYTES", 4*1024*1024)
+	cfg.MaxBodyBytes, err = getenvInt64("MAX_BODY_BYTES", 90*1024*1024)
 	if err != nil {
 		return Config{}, fmt.Errorf("MAX_BODY_BYTES: %w", err)
 	}
@@ -64,7 +64,7 @@ func Load() (Config, error) {
 	if int64(cfg.MaxCipherBytes+cfg.MaxMetaBytes+1024) > cfg.MaxBodyBytes {
 		return Config{}, fmt.Errorf("MAX_BODY_BYTES too small for configured MAX_META_BYTES and MAX_CIPHERTEXT_BYTES")
 	}
-	cfg.MaxFileBytes, err = getenvInt64("MAX_FILE_BYTES", 4*1024*1024)
+	cfg.MaxFileBytes, err = getenvInt64("MAX_FILE_BYTES", 50*1024*1024)
 	if err != nil {
 		return Config{}, fmt.Errorf("MAX_FILE_BYTES: %w", err)
 	}
@@ -116,7 +116,7 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("STRICT_REDIS_EPHEMERAL: %w", err)
 	}
-	timeoutMs, err := getenvInt64("REQUEST_TIMEOUT_MS", 5000)
+	timeoutMs, err := getenvInt64("REQUEST_TIMEOUT_MS", 60000)
 	if err != nil {
 		return Config{}, fmt.Errorf("REQUEST_TIMEOUT_MS: %w", err)
 	}

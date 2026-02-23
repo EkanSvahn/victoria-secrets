@@ -37,11 +37,16 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 		withTimeout(cfg.RequestTimeout),
 	)
 
+	readTimeout := cfg.RequestTimeout + (5 * time.Second)
+	if readTimeout < 15*time.Second {
+		readTimeout = 15 * time.Second
+	}
+
 	return &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           stack,
 		ReadHeaderTimeout: 3 * time.Second,
-		ReadTimeout:       5 * time.Second,
+		ReadTimeout:       readTimeout,
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       30 * time.Second,
 		ErrorLog:          slog.NewLogLogger(slog.Default().Handler(), slog.LevelError),
