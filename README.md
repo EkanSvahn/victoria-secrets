@@ -71,7 +71,7 @@ This reduces exposure significantly, but does not eliminate all risk.
 - The secret key is either in URL fragment (`#...`) or derived from user password.
 - URL fragments are not sent to the server by browsers.
 - Backend never receives plaintext secret in default flow.
-- Frontend currently enforces a 4 MiB max file upload for secure performance bounds.
+- The example dev/prod compose configuration sets a 50 MiB file upload limit with matching body/ciphertext/request timeout caps.
 - Backend enforces strict `meta` schema + payload size caps for `meta` and `ciphertext`.
 - Backend enforces file metadata policy (safe filename, max raw file bytes, MIME allowlist).
 - In password mode, metadata includes KDF parameters and salt; plaintext key is never sent.
@@ -87,5 +87,11 @@ Ephemeral does not protect against:
 - Deployment misconfiguration (DNS, TLS, headers, logging, policy settings)
 
 Use it as a hardened transport-and-sharing mechanism, not as a substitute for endpoint security or operational hygiene.
+
+## File Upload Sizing Notes
+- The current architecture is optimized for secrets and small/medium files (browser encryption + Redis-backed ciphertext storage).
+- Larger limits increase memory and timeout pressure in the browser, backend, and Redis.
+- Increase `MAX_FILE_BYTES` together with `MAX_BODY_BYTES`, `MAX_CIPHERTEXT_BYTES`, and `REQUEST_TIMEOUT_MS`.
+- For very large files (for example large database backups), prefer a separate chunked/object-storage flow and use Ephemeral to share keys/passwords.
 
 Read `docs/threat-model.md`, `docs/security-checklist.md`, `docs/production-hardening.md`, and `docs/deployment-runbook.md` before production deployment.
