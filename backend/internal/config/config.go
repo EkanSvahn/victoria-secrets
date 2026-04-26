@@ -68,8 +68,8 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("MAX_FILE_BYTES: %w", err)
 	}
-	if cfg.MaxFileBytes < 1024 || cfg.MaxFileBytes > 100*1024*1024 {
-		return Config{}, fmt.Errorf("MAX_FILE_BYTES must be between 1024 and 104857600")
+	if cfg.MaxFileBytes < 1024 || cfg.MaxFileBytes > 500*1024*1024 {
+		return Config{}, fmt.Errorf("MAX_FILE_BYTES must be between 1024 and 524288000")
 	}
 	cfg.AllowedFileMIMEs = parseCSV(getenv("ALLOWED_FILE_MIME_TYPES", "application/pdf,image/png,image/jpeg,text/plain,application/octet-stream"))
 	cfg.MaxTTLSeconds, err = getenvInt64("MAX_TTL_SECONDS", 86400)
