@@ -7,8 +7,8 @@
   --text-muted: #475467;
   --line: #d0d7e1;
   --line-strong: #bac4d2;
-  --accent: #c4e456;
-  --accent-strong: #b4d646;
+  --accent: #5e870c;
+  --accent-strong: #4d7009;
   --danger: #c1121f;
   --badge-bg: rgba(255, 255, 255, 0.85);
   --badge-text: #243043;
@@ -17,6 +17,21 @@
   --mono: "Space Mono", "IBM Plex Mono", "JetBrains Mono", monospace;
   --sans: "Space Mono", "IBM Plex Sans", "Inter", sans-serif;
   --display: "Space Mono", "IBM Plex Sans", "Inter", sans-serif;
+
+  --input-bg: #eaf0f8;
+  --btn-bg: #e2e8f0;
+  --btn-text: #101828;
+  --btn-hover-bg: #cbd5e1;
+  --btn-hover-text: #5e870c;
+  --btn-disabled-bg: #f1f5f9;
+  --btn-disabled-text: #94a3b8;
+  
+  --panel-strong: #ffffff;
+  --panel-active: #f1f5f9;
+  --panel-border: #d0d7e1;
+  --switch-bg: #eaf0f8;
+  --switch-active-bg: #ffffff;
+  --logo-filter: invert(1) hue-rotate(180deg);
 }
 
 :root[data-theme='dark'] {
@@ -35,6 +50,21 @@
   --badge-text: #efefef;
   --shadow: none;
   --radius: 0px;
+
+  --input-bg: color-mix(in oklab, var(--panel) 86%, #1f1f1f);
+  --btn-bg: #2c2c2c;
+  --btn-text: #f3f3f3;
+  --btn-hover-bg: #1a1a1a;
+  --btn-hover-text: #c4e456;
+  --btn-disabled-bg: #101010;
+  --btn-disabled-text: #727272;
+
+  --panel-strong: #151515;
+  --panel-active: #121712;
+  --panel-border: color-mix(in oklab, var(--line-strong) 86%, #8b8b8b);
+  --switch-bg: #101010;
+  --switch-active-bg: #1d1d1d;
+  --logo-filter: none;
 }
 
 * {
@@ -112,7 +142,7 @@ select {
   border: none;
   border-radius: var(--radius);
   padding: 0.44rem;
-  background: color-mix(in oklab, var(--panel) 86%, #1f1f1f);
+  background: var(--input-bg);
   color: var(--text);
   font-size: 0.96rem;
 }
@@ -144,24 +174,28 @@ button {
   border: none;
   border-radius: var(--radius);
   padding: 0.42rem 0.82rem;
-  background: #2c2c2c;
-  color: #f3f3f3;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
   font-family: var(--mono);
   text-transform: lowercase;
   line-height: 1.1;
+  transition: all 100ms ease;
 }
 
 button:hover {
-  background: #1a1a1a;
-  color: var(--accent);
+  background: var(--btn-hover-bg);
+  color: var(--btn-hover-text);
 }
 
 button:disabled {
+  background: var(--btn-disabled-bg) !important;
+  color: var(--btn-disabled-text) !important;
   opacity: 0.62;
   cursor: not-allowed;
+  box-shadow: none !important;
 }
 
 .error {

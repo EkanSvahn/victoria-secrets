@@ -71,6 +71,7 @@ function applyTheme(nextTheme: 'light' | 'dark') {
   height: auto;
   margin-bottom: 1.4rem;
   opacity: 0.96;
+  filter: var(--logo-filter);
 }
 
 .theme-fab {

@@ -358,7 +358,7 @@ function formatBytes(bytes: number): string {
   border: none;
   border-radius: 0;
   width: 170px;
-  background: color-mix(in oklab, var(--panel) 84%, #1f1f1f);
+  background: var(--switch-bg);
 }
 
 .toggle {
@@ -384,7 +384,7 @@ function formatBytes(bytes: number): string {
 }
 
 .toggle.active {
-  background: #1d1d1d;
+  background: var(--switch-active-bg);
   color: var(--text);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
@@ -395,8 +395,8 @@ function formatBytes(bytes: number): string {
 
 .content-panel {
   min-height: 255px;
-  border: 1px solid color-mix(in oklab, var(--line-strong) 86%, #8b8b8b);
-  background: #151515;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-strong);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
   transition:
     border-color 120ms ease,
@@ -425,7 +425,7 @@ function formatBytes(bytes: number): string {
   box-shadow:
     0 8px 22px rgba(0, 0, 0, 0.18),
     inset 0 0 0 1px var(--accent);
-  background: #121712;
+  background: var(--panel-active);
 }
 
 .file-panel {
@@ -493,8 +493,6 @@ function formatBytes(bytes: number): string {
 
 .action-row button:disabled {
   opacity: 1;
-  background: #101010;
-  color: #727272;
   box-shadow: inset 0 0 0 1px var(--line);
 }
 
@@ -514,7 +512,7 @@ function formatBytes(bytes: number): string {
 
 .advanced {
   border-top: none;
-  background: color-mix(in oklab, var(--panel) 84%, #1f1f1f);
+  background: var(--panel-active);
   padding: 0.95rem;
 }
 
@@ -546,8 +544,8 @@ function formatBytes(bytes: number): string {
 .mini-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: #101010;
-  border: 1px solid var(--line);
+  background: var(--switch-bg);
+  border: 1px solid var(--panel-border);
   min-height: 38px;
 }
 
@@ -568,7 +566,7 @@ function formatBytes(bytes: number): string {
 .mini-toggle.active {
   color: var(--text);
   box-shadow: inset 0 0 0 1px var(--accent);
-  background: #151515;
+  background: var(--switch-active-bg);
 }
 
 .unit-field {
@@ -576,8 +574,8 @@ function formatBytes(bytes: number): string {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
   min-height: 38px;
-  border: 1px solid var(--line);
-  background: #101010;
+  border: 1px solid var(--panel-border);
+  background: var(--switch-bg);
 }
 
 .unit-field input {
@@ -628,8 +626,8 @@ function formatBytes(bytes: number): string {
 }
 
 .share-link-input {
-  border: 1px solid var(--line-strong);
-  background: #151515;
+  border: 1px solid var(--panel-border);
+  background: var(--panel-strong);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
 }
 

@@ -1,8 +1,6 @@
 module victora-secret-code/backend
 
-go 1.23
-
-toolchain go1.24.13
+go 1.25.9
 
 require github.com/redis/go-redis/v9 v9.18.0
 

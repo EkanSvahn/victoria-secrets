@@ -10,14 +10,15 @@ services:
   backend:
     build:
       context: ../backend
+    restart: on-failure
     environment:
       LISTEN_ADDR: ":8080"
       REDIS_URL: "redis://redis:6379/0"
-      MAX_BODY_BYTES: "94371840"
+      MAX_BODY_BYTES: "367001600"
       MAX_META_BYTES: "16384"
-      MAX_CIPHERTEXT_BYTES: "83886080"
-      MAX_FILE_BYTES: "52428800"
-      ALLOWED_FILE_MIME_TYPES: "application/pdf,image/png,image/jpeg,text/plain,application/octet-stream"
+      MAX_CIPHERTEXT_BYTES: "314572800"
+      MAX_FILE_BYTES: "262144000"
+      ALLOWED_FILE_MIME_TYPES: "application/pdf,image/png,image/jpeg,text/plain,application/octet-stream,application/json,application/zip,application/x-rar-compressed,application/vnd.rar,application/x-7z-compressed,application/gzip,application/x-tar"
       MAX_TTL_SECONDS: "86400"
       MAX_VIEWS: "100"
       ID_LENGTH_BYTES: "24"
@@ -35,10 +36,12 @@ services:
   frontend:
     image: node:22-alpine
     working_dir: /app
+    restart: on-failure
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     environment:
       VITE_API_BASE_URL: "http://localhost:8080/api"
       VITE_REQUIRE_PASSWORD: "false"
+      CHOKIDAR_USEPOLLING: "true"
     volumes:
       - ../frontend:/app
     ports:
