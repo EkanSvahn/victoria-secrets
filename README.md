@@ -56,7 +56,8 @@ This reduces exposure significantly, but does not eliminate all risk.
    - all other paths -> frontend
 
 ## API (MVP)
-- `GET /api/health`
+- `GET /api/health` — liveness (always 200 if process is up)
+- `GET /api/ready` — readiness (200 when Redis reachable, 503 otherwise)
 - `GET /api/status`
 - `GET /api/metrics`
 - `POST /api/v1/secrets`

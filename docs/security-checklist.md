@@ -7,7 +7,7 @@
 - [x] Add API rate limiting (per IP and endpoint).
 - [ ] Configure alerting on 4xx/5xx spikes.
 - [x] Enable dependency scanning in CI.
-- [ ] Enable container image scanning in CI.
+- [x] Enable container image scanning in CI.
 
 ## Nice Next
 - [ ] Add encrypted metadata backup strategy (no plaintext content).

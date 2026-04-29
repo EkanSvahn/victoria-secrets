@@ -10,7 +10,7 @@ import (
 	"victora-secret-code/backend/internal/metrics"
 )
 
-func NewServer(cfg config.Config, service *app.Service) *http.Server {
+func NewServer(cfg config.Config, service *app.Service, readiness ReadinessCheck) *http.Server {
 	mux := http.NewServeMux()
 	counters := metrics.NewCounters()
 	handler := NewHandler(service, RequestLimits{
@@ -22,6 +22,7 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 		MaxViews:         cfg.MaxViews,
 		RequirePassword:  cfg.RequirePassword,
 	}, counters)
+	handler.SetReadinessCheck(readiness)
 	handler.RegisterRoutes(mux, cfg.MetricsEnabled)
 	limiter := NewLimiter(cfg.RateLimitRPM, cfg.RateLimitBurst)
 	resolveClientIP := newClientIPResolver(cfg.TrustedProxyCID)
@@ -41,13 +42,17 @@ func NewServer(cfg config.Config, service *app.Service) *http.Server {
 	if readTimeout < 15*time.Second {
 		readTimeout = 15 * time.Second
 	}
+	writeTimeout := cfg.RequestTimeout + (10 * time.Second)
+	if writeTimeout < 30*time.Second {
+		writeTimeout = 30 * time.Second
+	}
 
 	return &http.Server{
 		Addr:              cfg.ListenAddr,
 		Handler:           stack,
 		ReadHeaderTimeout: 3 * time.Second,
 		ReadTimeout:       readTimeout,
-		WriteTimeout:      10 * time.Second,
+		WriteTimeout:      writeTimeout,
 		IdleTimeout:       30 * time.Second,
 		ErrorLog:          slog.NewLogLogger(slog.Default().Handler(), slog.LevelError),
 	}

@@ -29,9 +29,13 @@ docker compose -f docker-compose.prod.yml up -d --build
 Health checks:
 
 ```bash
-curl -fsS https://<your-domain>/api/health
+curl -fsS https://<your-domain>/api/health   # liveness — process is up
+curl -fsS https://<your-domain>/api/ready    # readiness — Redis reachable
 curl -fsS https://<your-domain>/api/status
 ```
+
+Configure load balancers / health probes to use `/api/ready`. Use `/api/health`
+only for liveness (restart-on-failure) checks.
 
 ## 4) Deploy (Cloud VM)
 Use the same commands as section 3. Ensure:
@@ -56,6 +60,7 @@ Post-rollback validation:
 
 ```bash
 curl -fsS https://<your-domain>/api/health
+curl -fsS https://<your-domain>/api/ready
 curl -fsS https://<your-domain>/api/status
 ```
 

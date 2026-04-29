@@ -48,7 +48,10 @@ func main() {
 
 	repo := redisadapter.New(redisClient)
 	service := applayer.NewService(repo, cfg.MaxTTLSeconds, cfg.MaxViews, cfg.IDLengthBytes)
-	server := httpadapter.NewServer(cfg, service)
+	readinessCheck := func(ctx context.Context) error {
+		return redisClient.Ping(ctx).Err()
+	}
+	server := httpadapter.NewServer(cfg, service, readinessCheck)
 
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)

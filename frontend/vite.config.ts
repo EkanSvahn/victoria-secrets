@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { readFileSync } from 'node:fs'
@@ -16,5 +17,10 @@ export default defineConfig({
   },
   server: {
     port: 5173
+  },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+    testTimeout: 30000
   }
 })

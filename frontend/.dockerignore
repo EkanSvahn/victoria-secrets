@@ -1,0 +1,22 @@
+.git
+.gitignore
+.github
+.env
+.env.*
+!.env.example
+*.md
+Dockerfile
+.dockerignore
+
+# Build output (rebuilt inside container)
+node_modules
+dist
+
+# Tests are not needed in the production image
+**/*.test.ts
+**/*.spec.ts
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
