@@ -1,0 +1,19 @@
+.git
+.gitignore
+.github
+.env
+.env.*
+!.env.example
+*.md
+Dockerfile
+.dockerignore
+
+# Test artifacts
+coverage.out
+*.test
+*.prof
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store

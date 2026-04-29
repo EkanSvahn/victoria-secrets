@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -142,6 +143,59 @@ func TestIntegrationFileLimitValidation(t *testing.T) {
 		}
 		if !strings.Contains(res.Body.String(), "file mime type is not allowed") {
 			t.Fatalf("unexpected error body: %s", res.Body.String())
+		}
+	})
+}
+
+func TestReadyEndpointReportsStatus(t *testing.T) {
+	limits := baseLimits()
+	repo := newIntegrationRepo()
+	service := app.NewService(repo, limits.MaxTTLSeconds, limits.MaxViews, 12)
+
+	t.Run("returns 200 when readiness check passes", func(t *testing.T) {
+		handler := NewHandler(service, limits, nil)
+		handler.SetReadinessCheck(func(_ context.Context) error { return nil })
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, false)
+
+		res := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/ready", nil)
+		mux.ServeHTTP(res, req)
+
+		if res.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d body=%s", res.Code, res.Body.String())
+		}
+	})
+
+	t.Run("returns 503 when readiness check fails", func(t *testing.T) {
+		handler := NewHandler(service, limits, nil)
+		handler.SetReadinessCheck(func(_ context.Context) error { return errors.New("redis down") })
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, false)
+
+		res := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/ready", nil)
+		mux.ServeHTTP(res, req)
+
+		if res.Code != http.StatusServiceUnavailable {
+			t.Fatalf("expected 503, got %d body=%s", res.Code, res.Body.String())
+		}
+		if !strings.Contains(res.Body.String(), "not_ready") {
+			t.Fatalf("expected not_ready error, got %s", res.Body.String())
+		}
+	})
+
+	t.Run("returns 200 when readiness check is nil (backwards compat)", func(t *testing.T) {
+		handler := NewHandler(service, limits, nil)
+		mux := http.NewServeMux()
+		handler.RegisterRoutes(mux, false)
+
+		res := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/ready", nil)
+		mux.ServeHTTP(res, req)
+
+		if res.Code != http.StatusOK {
+			t.Fatalf("expected 200 when no check configured, got %d", res.Code)
 		}
 	})
 }

@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 	"unicode"
 
 	"victora-secret-code/backend/internal/app"
@@ -15,10 +17,13 @@ import (
 	"victora-secret-code/backend/internal/metrics"
 )
 
+type ReadinessCheck func(ctx context.Context) error
+
 type Handler struct {
-	service *app.Service
-	limits  RequestLimits
-	metrics *metrics.Counters
+	service        *app.Service
+	limits         RequestLimits
+	metrics        *metrics.Counters
+	readinessCheck ReadinessCheck
 }
 
 type RequestLimits struct {
@@ -38,6 +43,10 @@ func NewHandler(service *app.Service, limits RequestLimits, counters *metrics.Co
 		counters = metrics.NewCounters()
 	}
 	return &Handler{service: service, limits: limits, metrics: counters}
+}
+
+func (h *Handler) SetReadinessCheck(check ReadinessCheck) {
+	h.readinessCheck = check
 }
 
 type createSecretRequest struct {
@@ -68,6 +77,7 @@ type consumeSecretResponse struct {
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, metricsEnabled bool) {
 	mux.HandleFunc("GET /api/health", h.health)
+	mux.HandleFunc("GET /api/ready", h.ready)
 	mux.HandleFunc("GET /api/status", h.status)
 	if metricsEnabled {
 		mux.HandleFunc("GET /api/metrics", h.getMetrics)
@@ -79,6 +89,20 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, metricsEnabled bool) {
 
 func (h *Handler) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *Handler) ready(w http.ResponseWriter, r *http.Request) {
+	if h.readinessCheck == nil {
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+	defer cancel()
+	if err := h.readinessCheck(ctx); err != nil {
+		writeError(w, http.StatusServiceUnavailable, "not_ready", "dependency unavailable")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 func (h *Handler) status(w http.ResponseWriter, _ *http.Request) {
