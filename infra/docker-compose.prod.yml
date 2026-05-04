@@ -12,20 +12,20 @@ services:
     environment:
       LISTEN_ADDR: ":8080"
       REDIS_URL: "redis://redis:6379/0"
-      MAX_BODY_BYTES: "94371840"
-      MAX_META_BYTES: "16384"
-      MAX_CIPHERTEXT_BYTES: "83886080"
-      MAX_FILE_BYTES: "52428800"
-      ALLOWED_FILE_MIME_TYPES: "application/pdf,image/png,image/jpeg,text/plain,application/octet-stream"
-      MAX_TTL_SECONDS: "86400"
-      MAX_VIEWS: "100"
-      ID_LENGTH_BYTES: "24"
-      REQUEST_TIMEOUT_MS: "60000"
-      ALLOWED_ORIGINS: "https://vaultdrop.example.com"
-      RATE_LIMIT_RPM: "120"
-      RATE_LIMIT_BURST: "40"
-      REQUIRE_PASSWORD: "true"
-      STRICT_REDIS_EPHEMERAL: "true"
+      MAX_BODY_BYTES: "${MAX_BODY_BYTES:-94371840}"
+      MAX_META_BYTES: "${MAX_META_BYTES:-16384}"
+      MAX_CIPHERTEXT_BYTES: "${MAX_CIPHERTEXT_BYTES:-83886080}"
+      MAX_FILE_BYTES: "${MAX_FILE_BYTES:-52428800}"
+      ALLOWED_FILE_MIME_TYPES: "${ALLOWED_FILE_MIME_TYPES:-application/pdf,image/png,image/jpeg,text/plain,application/octet-stream}"
+      MAX_TTL_SECONDS: "${MAX_TTL_SECONDS:-86400}"
+      MAX_VIEWS: "${MAX_VIEWS:-100}"
+      ID_LENGTH_BYTES: "${ID_LENGTH_BYTES:-24}"
+      REQUEST_TIMEOUT_MS: "${REQUEST_TIMEOUT_MS:-60000}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:?ALLOWED_ORIGINS must be set in infra/.env}"
+      RATE_LIMIT_RPM: "${RATE_LIMIT_RPM:-60}"
+      RATE_LIMIT_BURST: "${RATE_LIMIT_BURST:-20}"
+      REQUIRE_PASSWORD: "${REQUIRE_PASSWORD:-true}"
+      STRICT_REDIS_EPHEMERAL: "${STRICT_REDIS_EPHEMERAL:-true}"
     depends_on:
       - redis
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
       context: ../frontend
       args:
         VITE_API_BASE_URL: "/api"
-        VITE_REQUIRE_PASSWORD: "true"
+        VITE_REQUIRE_PASSWORD: "${VITE_REQUIRE_PASSWORD:-true}"
     restart: unless-stopped
     depends_on:
       - backend

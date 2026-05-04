@@ -9,13 +9,24 @@ This runbook covers a simple production flow for VaultDrop on Ubuntu (physical h
 - Redis must be private (not exposed publicly).
 
 ## 2) Production Configuration
-1. Set your real domain in `infra/Caddyfile.prod`.
-2. Copy `.env.example` to `.env` and set production values:
-   - `ALLOWED_ORIGINS` to your real HTTPS frontend URL
-   - `REQUIRE_PASSWORD=true` for organization/internal policy mode
-   - `STRICT_REDIS_EPHEMERAL=true`
-   - tune `MAX_FILE_BYTES`, `ALLOWED_FILE_MIME_TYPES`, `MAX_TTL_SECONDS`, `MAX_VIEWS`
-3. Keep Redis bound to private network only.
+
+Production values live on the deployment host in `infra/.env`, which is
+gitignored. The repo's `infra/docker-compose.prod.yml` reads them via
+`${VAR}` interpolation, so the compose file itself is identical between
+repo and server — no merge conflicts on `git pull`.
+
+1. On the deployment host, copy the template:
+   ```bash
+   cp infra/.env.example infra/.env
+   ```
+2. Edit `infra/.env` with production values:
+   - `ALLOWED_ORIGINS=https://your-domain` — required, no fallback
+   - `REQUIRE_PASSWORD=true` for organization/internal mode
+   - tune `MAX_FILE_BYTES`, `ALLOWED_FILE_MIME_TYPES`, etc. as needed
+3. Set your real domain(s) in `infra/Caddyfile.prod`. Note that this
+   file may also need to be customized per-host if multiple apps share
+   the same edge Caddy. Keep a backup as `Caddyfile.prod.backup-YYYYMMDD`.
+4. Keep Redis bound to the private compose network only.
 
 ## 3) Deploy (Ubuntu host)
 From repo root:
