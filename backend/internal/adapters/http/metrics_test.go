@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 
 	"victora-secret-code/backend/internal/metrics"
@@ -12,6 +14,7 @@ import (
 func TestMetricsEndpointReturnsCounters(t *testing.T) {
 	counters := metrics.NewCounters()
 	counters.IncCreate()
+	counters.IncConsume()
 	counters.IncConsume()
 	counters.IncNotFound()
 	counters.IncRateLimited()
@@ -27,14 +30,47 @@ func TestMetricsEndpointReturnsCounters(t *testing.T) {
 	if res.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", res.Code)
 	}
+	if got := res.Header().Get("Content-Type"); got != metrics.PrometheusContentType {
+		t.Fatalf("Content-Type: got %q, want %q", got, metrics.PrometheusContentType)
+	}
 
-	var got metrics.Snapshot
-	if err := json.Unmarshal(res.Body.Bytes(), &got); err != nil {
-		t.Fatalf("failed to parse metrics JSON: %v", err)
+	values := parsePromCounters(t, res.Body.String())
+	want := map[string]uint64{
+		"ephemeral_secrets_created_total":   1,
+		"ephemeral_secrets_consumed_total":  2,
+		"ephemeral_secrets_not_found_total": 1,
+		"ephemeral_rate_limited_total":      1,
 	}
-	if got.Create != 1 || got.Consume != 1 || got.NotFound != 1 || got.RateLimited != 1 {
-		t.Fatalf("unexpected metrics snapshot: %+v", got)
+	for name, expected := range want {
+		got, ok := values[name]
+		if !ok {
+			t.Fatalf("metric %q missing from output:\n%s", name, res.Body.String())
+		}
+		if got != expected {
+			t.Fatalf("metric %q: got %d, want %d", name, got, expected)
+		}
 	}
+}
+
+func parsePromCounters(t *testing.T, body string) map[string]uint64 {
+	t.Helper()
+	out := map[string]uint64{}
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.Fields(line)
+		if len(parts) != 2 {
+			t.Fatalf("malformed metric line: %q", line)
+		}
+		v, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			t.Fatalf("metric %q has non-integer value %q: %v", parts[0], parts[1], err)
+		}
+		out[parts[0]] = v
+	}
+	return out
 }
 
 func TestStatusEndpointReturnsLimits(t *testing.T) {
