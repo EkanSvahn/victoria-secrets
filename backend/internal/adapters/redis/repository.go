@@ -71,6 +71,10 @@ func (r *Repository) Consume(ctx context.Context, id string) (*ports.SecretRecor
 		}
 		return nil, err
 	}
+	return decodeConsumeResult(result)
+}
+
+func decodeConsumeResult(result any) (*ports.SecretRecord, error) {
 	if result == nil {
 		return nil, nil
 	}
