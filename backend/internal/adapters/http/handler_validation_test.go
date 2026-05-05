@@ -197,6 +197,85 @@ func TestValidateCreateSecretRequestRejectsUnsafeFileName(t *testing.T) {
 	}
 }
 
+func TestValidateCreateSecretRequestAcceptsArgon2MemoryAboveFloorWhenRequired(t *testing.T) {
+	limits := baseLimits()
+	limits.RequirePassword = true
+	views := int64(1)
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       `{"v":1,"t":"text","alg":"AES-GCM-256","kdf":"ARGON2ID","tt":3,"tm":131072,"tp":1,"s":"YWJjZGVmZw"}`,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		Views:      &views,
+	}, limits)
+	if err != nil {
+		t.Fatalf("Argon2 with tm above the strict floor must be accepted, got: %v", err)
+	}
+}
+
+func TestValidateCreateSecretRequestRejectsArgon2BelowStrictFloorWhenRequired(t *testing.T) {
+	limits := baseLimits()
+	limits.RequirePassword = true
+	views := int64(1)
+	meta := `{"v":1,"t":"text","alg":"AES-GCM-256","kdf":"ARGON2ID","tt":3,"tm":32768,"tp":1,"s":"YWJjZGVmZw"}`
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       meta,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		Views:      &views,
+	}, limits)
+	if err == nil {
+		t.Fatal("expected rejection of tm=32768 in RequirePassword mode")
+	}
+}
+
+func TestValidateCreateSecretRequestAcceptsArgon2BelowStrictFloorWhenNotRequired(t *testing.T) {
+	limits := baseLimits()
+	limits.RequirePassword = false
+	views := int64(1)
+	meta := `{"v":1,"t":"text","alg":"AES-GCM-256","kdf":"ARGON2ID","tt":3,"tm":32768,"tp":1,"s":"YWJjZGVmZw"}`
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       meta,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		Views:      &views,
+	}, limits)
+	if err != nil {
+		t.Fatalf("tm=32768 must be accepted when RequirePassword is false (proves the gating is conditional), got: %v", err)
+	}
+}
+
+func TestValidateCreateSecretRequestRejectsPBKDF2WhenRequired(t *testing.T) {
+	limits := baseLimits()
+	limits.RequirePassword = true
+	views := int64(1)
+	meta := `{"v":1,"t":"text","alg":"AES-GCM-256","kdf":"PBKDF2-SHA256","i":310000,"s":"YWJjZGVmZw"}`
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       meta,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		Views:      &views,
+	}, limits)
+	if err == nil {
+		t.Fatal("expected rejection of PBKDF2 in RequirePassword mode")
+	}
+}
+
+func TestValidateCreateSecretRequestAcceptsPBKDF2WhenNotRequired(t *testing.T) {
+	limits := baseLimits()
+	limits.RequirePassword = false
+	views := int64(1)
+	meta := `{"v":1,"t":"text","alg":"AES-GCM-256","kdf":"PBKDF2-SHA256","i":310000,"s":"YWJjZGVmZw"}`
+	err := validateCreateSecretRequest(createSecretRequest{
+		Meta:       meta,
+		Ciphertext: `{"iv":"abc","ct":"xyz"}`,
+		Kind:       "text",
+		Views:      &views,
+	}, limits)
+	if err != nil {
+		t.Fatalf("PBKDF2 must remain accepted when RequirePassword is false (legacy share-link compatibility), got: %v", err)
+	}
+}
+
 func TestValidateCreateSecretRequestRejectsBothViewsAndTTL(t *testing.T) {
 	limits := baseLimits()
 	err := validateCreateSecretRequest(createSecretRequest{

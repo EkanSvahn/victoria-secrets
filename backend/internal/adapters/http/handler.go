@@ -116,7 +116,9 @@ func (h *Handler) status(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (h *Handler) getMetrics(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, h.metrics.Snapshot())
+	w.Header().Set("Content-Type", metrics.PrometheusContentType)
+	w.WriteHeader(http.StatusOK)
+	_ = h.metrics.WriteText(w)
 }
 
 func (h *Handler) createSecret(w http.ResponseWriter, r *http.Request) {
@@ -188,6 +190,16 @@ func validateCreateSecretRequest(req createSecretRequest, limits RequestLimits) 
 	}
 	if limits.RequirePassword && parsedMeta.KDF == "" {
 		return errors.New("password-only mode is enabled")
+	}
+	if limits.RequirePassword {
+		switch parsedMeta.KDF {
+		case "PBKDF2-SHA256":
+			return errors.New("PBKDF2 is not accepted when password is mandatory; use Argon2id")
+		case "ARGON2ID":
+			if parsedMeta.MemoryKiB < 65536 {
+				return errors.New("Argon2id memory cost must be at least 65536 KiB when password is mandatory")
+			}
+		}
 	}
 	if kind == string(domain.SecretKindFile) {
 		if parsedMeta.FileSize > limits.MaxFileBytes {
@@ -283,6 +295,9 @@ func validateKDF(meta metaPayload) error {
 			return errors.New("invalid PBKDF2 iterations")
 		}
 	case "ARGON2ID":
+		// Ranges intentionally wider than the frontend's hard-coded defaults
+		// (t=3, p=1) so the frontend can be tuned independently. Stricter
+		// floors apply in RequirePassword mode — see validateCreateSecretRequest.
 		if meta.TimeCost < 1 || meta.TimeCost > 10 {
 			return errors.New("invalid Argon2id time cost")
 		}
