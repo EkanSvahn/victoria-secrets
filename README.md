@@ -59,7 +59,7 @@ This reduces exposure significantly, but does not eliminate all risk.
 - `GET /api/health` — liveness (always 200 if process is up)
 - `GET /api/ready` — readiness (200 when Redis reachable, 503 otherwise)
 - `GET /api/status`
-- `GET /api/metrics`
+- `GET /api/metrics` — Prometheus text format; gated by `METRICS_ENABLED`
 - `POST /api/v1/secrets`
 - `GET /api/v1/secrets/{id}`
 - `POST /api/v1/secrets/{id}/consume`

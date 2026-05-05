@@ -1,6 +1,10 @@
 package metrics
 
-import "sync/atomic"
+import (
+	"fmt"
+	"io"
+	"sync/atomic"
+)
 
 type Counters struct {
 	createCount      atomic.Uint64
@@ -43,4 +47,28 @@ func (c *Counters) Snapshot() Snapshot {
 		NotFound:    c.notFoundCount.Load(),
 		RateLimited: c.rateLimitedCount.Load(),
 	}
+}
+
+// PrometheusContentType is the exposition format Prometheus servers expect
+// when scraping the /api/metrics endpoint.
+const PrometheusContentType = "text/plain; version=0.0.4; charset=utf-8"
+
+func (c *Counters) WriteText(w io.Writer) error {
+	snap := c.Snapshot()
+	entries := []struct {
+		name  string
+		help  string
+		value uint64
+	}{
+		{"ephemeral_secrets_created_total", "Number of secrets successfully created.", snap.Create},
+		{"ephemeral_secrets_consumed_total", "Number of secrets successfully consumed.", snap.Consume},
+		{"ephemeral_secrets_not_found_total", "Number of preview or consume requests for missing secrets.", snap.NotFound},
+		{"ephemeral_rate_limited_total", "Number of requests rejected by the rate limiter.", snap.RateLimited},
+	}
+	for _, e := range entries {
+		if _, err := fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s counter\n%s %d\n", e.name, e.help, e.name, e.name, e.value); err != nil {
+			return err
+		}
+	}
+	return nil
 }
