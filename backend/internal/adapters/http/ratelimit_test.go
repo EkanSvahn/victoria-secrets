@@ -59,6 +59,68 @@ func TestRateLimitMiddlewareProtectedRoute(t *testing.T) {
 	}
 }
 
+func TestRateLimitMiddlewareIsolatesPerIP(t *testing.T) {
+	limiter := NewLimiter(1, 1)
+	counters := metrics.NewCounters()
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/secrets", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	})
+	handler := rateLimit(limiter, counters, nil)(mux)
+
+	doPost := func(remoteAddr string) int {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/secrets", nil)
+		req.RemoteAddr = remoteAddr
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		return res.Code
+	}
+
+	if got := doPost("10.0.0.1:1234"); got != http.StatusCreated {
+		t.Fatalf("client A first request: got %d, want 201", got)
+	}
+	if got := doPost("10.0.0.1:1234"); got != http.StatusTooManyRequests {
+		t.Fatalf("client A second request: got %d, want 429", got)
+	}
+	if got := doPost("10.0.0.2:1234"); got != http.StatusCreated {
+		t.Fatalf("client B must have a fresh bucket: got %d, want 201", got)
+	}
+	if got := doPost("10.0.0.2:1234"); got != http.StatusTooManyRequests {
+		t.Fatalf("client B second request: got %d, want 429", got)
+	}
+}
+
+func TestRateLimitMiddlewareIsolatesPerRoute(t *testing.T) {
+	limiter := NewLimiter(1, 1)
+	counters := metrics.NewCounters()
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/secrets", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	})
+	mux.HandleFunc("GET /api/v1/secrets/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	handler := rateLimit(limiter, counters, nil)(mux)
+
+	send := func(method, path string) int {
+		req := httptest.NewRequest(method, path, nil)
+		req.RemoteAddr = "10.0.0.1:1234"
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		return res.Code
+	}
+
+	if got := send(http.MethodPost, "/api/v1/secrets"); got != http.StatusCreated {
+		t.Fatalf("first POST: got %d, want 201", got)
+	}
+	if got := send(http.MethodPost, "/api/v1/secrets"); got != http.StatusTooManyRequests {
+		t.Fatalf("second POST: got %d, want 429", got)
+	}
+	if got := send(http.MethodGet, "/api/v1/secrets/abc"); got != http.StatusOK {
+		t.Fatalf("GET on different route must have its own bucket: got %d, want 200", got)
+	}
+}
+
 func TestLimiterCleansUpExpiredBuckets(t *testing.T) {
 	limiter := NewLimiter(60, 1)
 	now := time.Unix(0, 0)

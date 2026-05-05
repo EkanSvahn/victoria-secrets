@@ -40,3 +40,28 @@ func TestClientIPResolverIgnoresForwardedForFromUntrustedProxy(t *testing.T) {
 		t.Fatalf("expected remote ip for untrusted proxy, got %s", ip)
 	}
 }
+
+func TestClientIPResolverFallsBackOnInvalidCIDR(t *testing.T) {
+	cases := []struct {
+		name string
+		cidr string
+	}{
+		{"garbage", "not-a-cidr"},
+		{"bad prefix length", "10.0.0.0/99"},
+		{"missing prefix", "10.0.0.0"},
+		{"only prefix", "/8"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			resolve := newClientIPResolver(c.cidr)
+			req := httptest.NewRequest("GET", "/api/health", nil)
+			req.RemoteAddr = "10.0.0.2:1234"
+			req.Header.Set("X-Forwarded-For", "203.0.113.50")
+
+			ip := resolve(req)
+			if ip != "10.0.0.2" {
+				t.Fatalf("invalid CIDR %q must disable XFF parsing, got %s", c.cidr, ip)
+			}
+		})
+	}
+}
